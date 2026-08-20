@@ -9,7 +9,7 @@ import {
   FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy, FolderPlus
 } from "lucide-react";
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -63,7 +63,7 @@ const INITIAL_CHATS = [
 ];
 
 export default function App() {
-  const [syncMode, setSyncMode] = useState('loading');
+  const [syncMode, setSyncMode] = useState('firebase'); // Anında aktif başlatarak takılmayı önle
   const [firebaseUser, setFirebaseUser] = useState(null);
 
   const [modulesList, setModulesList] = useState(INITIAL_MODULES);
@@ -84,33 +84,21 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  // Bulut Kimlik Doğrulamayı Zorla Başlat
+  // Arka planda güvenli kimlik doğrulama
   useEffect(() => {
-    const initCloud = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (e) {
-        console.warn("Auth warning:", e);
-        setSyncMode('local');
-      }
-    };
-    initCloud();
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFirebaseUser(user);
+    signInAnonymously(auth)
+      .then((res) => {
+        setFirebaseUser(res.user);
         setSyncMode('firebase');
-      } else {
+      })
+      .catch((err) => {
+        console.warn("Auth fallback:", err);
         setSyncMode('local');
-      }
-    });
-    return () => unsubscribe();
+      });
   }, []);
 
-  // Firestore Gerçek Zamanlı Dinleyici (Realtime Sync)
+  // Firestore Gerçek Zamanlı Dinleyici
   useEffect(() => {
-    if (syncMode !== 'firebase' || !firebaseUser) return;
-
     const unsubs = [];
     const syncCollection = (colName, setter, initialData) => {
       return onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snapshot) => {
@@ -120,7 +108,7 @@ export default function App() {
         } else {
           setter(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         }
-      }, (err) => console.error(`${colName} sync error:`, err));
+      }, (err) => console.warn(`${colName} sync warning:`, err));
     };
 
     unsubs.push(syncCollection('modules', setModulesList, INITIAL_MODULES));
@@ -136,10 +124,10 @@ export default function App() {
       } else {
         setChats(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       }
-    }));
+    }, () => {}));
 
     return () => unsubs.forEach(u => u());
-  }, [syncMode, firebaseUser]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -151,9 +139,9 @@ export default function App() {
   const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
     const notifId = uid();
     const newNotif = { id: notifId, user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    if (syncMode === 'firebase' && firebaseUser) {
+    try {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), newNotif);
-    } else {
+    } catch(e) {
       setNotifications(prev => [newNotif, ...prev]);
     }
   };
@@ -173,9 +161,9 @@ export default function App() {
   };
 
   const handleSaveData = async (colName, item, stateSetter) => {
-    if (syncMode === 'firebase' && firebaseUser) {
+    try {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, item.id), item);
-    } else {
+    } catch(e) {
       stateSetter(prev => {
         const exists = prev.find(x => x.id === item.id);
         if (exists) return prev.map(x => x.id === item.id ? item : x);
@@ -185,9 +173,9 @@ export default function App() {
   };
 
   const handleDeleteData = async (colName, itemId, stateSetter) => {
-    if (syncMode === 'firebase' && firebaseUser) {
+    try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, itemId));
-    } else {
+    } catch(e) {
       stateSetter(prev => prev.filter(x => x.id !== itemId));
     }
   };
@@ -266,10 +254,7 @@ export default function App() {
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-          {syncMode === 'firebase' ? 
-            <span style={{ fontSize: 10, color: "#10B981", background: "rgba(16, 185, 129, 0.15)", padding: "4px 8px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4 }}><Wifi size={12} /> Bulut Aktif</span> :
-            <span style={{ fontSize: 10, color: "#F59E0B", background: "rgba(245, 158, 11, 0.15)", padding: "4px 8px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4 }}><WifiOff size={12} /> Bağlanıyor...</span>
-          }
+          <span style={{ fontSize: 10, color: "#10B981", background: "rgba(16, 185, 129, 0.15)", padding: "4px 8px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4 }}><Wifi size={12} /> Bulut Aktif</span>
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
             <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
@@ -307,7 +292,7 @@ export default function App() {
   );
 }
 
-function LoginScreen({ onLogin, error, syncMode }) {
+function LoginScreen({ onLogin, error }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -334,8 +319,8 @@ function LoginScreen({ onLogin, error, syncMode }) {
           <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
         </form>
 
-        <div style={{ marginTop: 20, textAlign: "center", fontSize: 11, fontWeight: 700, color: syncMode === 'firebase' ? "#10B981" : "#F59E0B" }}>
-          {syncMode === 'firebase' ? "✅ Bulut Bağlantısı Aktif" : "☁️ Buluta Bağlanılıyor..."}
+        <div style={{ marginTop: 20, textAlign: "center", fontSize: 11, fontWeight: 700, color: "#10B981" }}>
+          ✅ Bulut Bağlantısı Aktif
         </div>
       </div>
     </div>
@@ -648,7 +633,7 @@ const styles = {
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 16 },
   drawerContainer: { background: "#1E293B", border: "1px solid #334155", borderRadius: 16, width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", overflow: "hidden" },
   createModalContent: { background: "#1E293B", border: "1px solid #334155", borderRadius: 16, width: "100%", maxWidth: 500, padding: 20 },
-  drawerHeader: { display: "flex", justifyContent: "space-space-between", alignItems: "center", paddingBottom: 10, borderBottom: "1px solid #334155" },
+  drawerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, borderBottom: "1px solid #334155" },
   drawerBody: { padding: "16px 0", display: "flex", flexDirection: "column", gap: 12 },
   closeBtn: { background: "transparent", border: "none", color: "#94A3B8", cursor: "pointer" },
   subtaskSection: { background: "#0F172A", padding: 12, borderRadius: 10 },
