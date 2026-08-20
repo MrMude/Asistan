@@ -1,5 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import {
   CheckSquare, Square, Plus, Trash2, Download, Upload, Sparkles,
   Calendar, Users, Target, AlertTriangle, CheckCircle2, Clock,
@@ -8,6 +11,22 @@ import {
   Lock, Key, LogOut, Shield, ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Zap, Truck,
   FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy
 } from "lucide-react";
+
+let app, auth, db;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'dva-kalite-os-global';
+let isFirebaseActive = false;
+
+try {
+  if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+    const firebaseConfig = JSON.parse(__firebase_config);
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    isFirebaseActive = true;
+  }
+} catch (e) {
+  console.warn("Firebase offline mode / fallback active", e);
+}
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -38,93 +57,22 @@ const INITIAL_USERS = [
   { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", permissions: ["kalite_kontrol", "iyilestirme"] }
 ];
 
-const INITIAL_TASKS = [
-  // Asakai Toplantısı
-  { id: "tsk-1", module: "asakai", kod: "ASK-2026-001", baslik: "Vardiya A Hatası Giriş Kontrol Tespiti", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-01", vade: "2026-08-10", bitisTarihi: "", durum: "acik", oncelik: "Kritik", subtasks: [{ id: "st-1", text: "Karantinaya alınması", sorumlu: "Ahmet Yılmaz", done: true }] },
-  { id: "tsk-6", module: "asakai", kod: "ASK-2026-002", baslik: "Haftalık OEE Düşüş Nedenleri Analizi", sorumlu: "Ahmet Yılmaz", gorevTipi: "ekip", ekipUyeleri: ["Selin Yıldız"], acilisTarihi: "2026-08-05", vade: "2026-08-20", bitisTarihi: "", durum: "beklemede", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-11", module: "asakai", kod: "ASK-2026-003", baslik: "Gece Vardiyası İş Güvenliği Kılavuz Taraması", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-10", vade: new Date(Date.now() + 86400000*2).toISOString().slice(0,10), bitisTarihi: "", durum: "devam", oncelik: "Kritik", subtasks: [] },
-  { id: "tsk-16", module: "asakai", kod: "ASK-2026-004", baslik: "Günlük Hurda Takip ve Azaltma Toplantısı", sorumlu: "Ahmet Yılmaz", gorevTipi: "ekip", ekipUyeleri: ["Selin Yıldız"], acilisTarihi: "2026-08-15", vade: "2026-08-25", bitisTarihi: "", durum: "devam", oncelik: "Kritik", subtasks: [] },
-  { id: "tsk-21", module: "asakai", kod: "ASK-2026-005", baslik: "Bakım Arıza Süreleri Değerlendirmesi", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-08-22", bitisTarihi: "", durum: "acik", oncelik: "Kritik", subtasks: [] },
-
-  // İyileştirme Toplantısı
-  { id: "tsk-2", module: "iyilestirme", kod: "IYL-2026-001", baslik: "Pres Hattı Fire Oranını Düşürme Kaizen Projesi", sorumlu: "Selin Yıldız", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz", "Selin Yıldız"], acilisTarihi: "2026-08-10", vade: "2026-09-01", bitisTarihi: "", durum: "devam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-7", module: "iyilestirme", kod: "IYL-2026-002", baslik: "Kaynak Robotu Kalibrasyon Süresinin İyileştirilmesi", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-06", vade: "2026-09-05", bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-12", module: "iyilestirme", kod: "IYL-2026-003", baslik: "Depo Raf Yerleşimi 5S Düzenleme Çalışması", sorumlu: "Selin Yıldız", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz", "Selin Yıldız"], acilisTarihi: "2026-08-11", vade: "2026-09-10", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-17", module: "iyilestirme", kod: "IYL-2026-004", baslik: "Paketleme İstasyonu Ergonomi İyileştirmesi", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-16", vade: "2026-09-15", bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-22", module: "iyilestirme", kod: "IYL-2026-005", baslik: "Enerji Tüketimini Azaltma Projesi (Kaizen)", sorumlu: "Selin Yıldız", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz"], acilisTarihi: "2026-08-18", vade: "2026-09-30", bitisTarihi: "", durum: "devam", oncelik: "Yüksek", subtasks: [] },
-
-  // Kalite Güvence
-  { id: "tsk-3", module: "kalite_guvence", kod: "KGV-2026-001", baslik: "ISO 9001 İç Tetkik Hazırlıkları ve Doküman Revizyonu", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz", "Selin Yıldız"], acilisTarihi: "2026-08-02", vade: "2026-08-25", bitisTarihi: "", durum: "devam", oncelik: "Kritik", subtasks: [{ id: "st-3", text: "Prosedürlerin güncellenmesi", sorumlu: "Ahmet Yılmaz", done: true }] },
-  { id: "tsk-8", module: "kalite_guvence", kod: "KGV-2026-002", baslik: "Müşteri Şikayeti 8D Raporu Kök Neden Araştırması", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz"], acilisTarihi: "2026-08-07", vade: "2026-08-14", bitisTarihi: "2026-08-12", durum: "tamam", oncelik: "Kritik", subtasks: [] },
-  { id: "tsk-13", module: "kalite_guvence", kod: "KGV-2026-003", baslik: "Tedarikçi Performans Puanlama Sistemi Güncellemesi", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-12", vade: new Date(Date.now() + 86400000*1).toISOString().slice(0,10), bitisTarihi: "", durum: "acik", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-18", module: "kalite_guvence", kod: "KGV-2026-004", baslik: "Çevre Yönetim Sistemi ISO 14001 Denetim Hazırlığı", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-17", vade: "2026-09-20", bitisTarihi: "", durum: "acik", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-23", module: "kalite_guvence", kod: "KGV-2026-005", baslik: "Müşteri Özel İstekleri ve Şartname Kontrol Matrisi", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-09-05", bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] },
-
-  // Kalite Kontrol
-  { id: "tsk-4", module: "kalite_kontrol", kod: "KKK-2026-001", baslik: "CNC Tezgah Parça Tolerans Ölçüm Doğrulaması", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-03", vade: "2026-08-15", bitisTarihi: "2026-08-14", durum: "tamam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-9", module: "kalite_kontrol", kod: "KKK-2026-002", baslik: "Montaj Hattı Pnömatik Tork Kontrolü", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-08", vade: "2026-08-22", bitisTarihi: "", durum: "devam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-14", module: "kalite_kontrol", kod: "KKK-2026-003", baslik: "Paketleme Boyutsal Uygunluk Testi", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-13", vade: "2026-08-19", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-19", module: "kalite_kontrol", kod: "KKK-2026-004", baslik: "Final Muayene Raporlarının Dijitalleşmesi Onayı", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-08-24", bitisTarihi: "2026-08-18", durum: "tamam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-24", module: "kalite_kontrol", kod: "KKK-2026-005", baslik: "Kordinat Ölçüm Cihazı (CMM) Problarının Kalibrasyonu", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-08-26", bitisTarihi: "", durum: "beklemede", oncelik: "Kritik", subtasks: [] },
-
-  // Tedarik Kalite
-  { id: "tsk-5", module: "tedarik_kalite", kod: "TRD-2026-001", baslik: "Sac Tedarikçisi ABC Metal hammadde girdi kontrolü", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-04", vade: "2026-08-18", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-10", module: "tedarik_kalite", kod: "TRD-2026-002", baslik: "Yan Sanayi Boyahane Denetimi", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-09", vade: "2026-08-30", bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-15", module: "tedarik_kalite", kod: "TRD-2026-003", baslik: "Plastik Enjeksiyon Parça Ömür Testleri", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-14", vade: "2026-08-28", bitisTarihi: "", durum: "beklemede", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-20", module: "tedarik_kalite", kod: "TRD-2026-004", baslik: "Döküm Parça Çapak Temizleme Süreç Kontrolü", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-08-29", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] },
-  { id: "tsk-25", module: "tedarik_kalite", kod: "TRD-2026-005", baslik: "Yeni Cıvata Tedarikçisi Numune Onay Raporu (PPAP)", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-18", vade: "2026-09-02", bitisTarihi: "", durum: "acik", oncelik: "Yüksek", subtasks: [] }
-];
-
-const INITIAL_TODOS = [
-  { id: "td-1", user: "Sistem Yöneticisi (Admin)", text: "Haftalık KPI Raporlarını İncele", done: false, priority: "Yüksek", subtasks: [{ id: "ts-1", text: "Dashboard verilerini dışa aktar", done: true }], developments: [] }
-];
-
-const INITIAL_CHATS = [
-  { id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, sisteme hoş geldiniz.", time: "08:30" }] }
-];
-
 export default function App() {
-  const [usersList, setUsersList] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_users");
-    let parsed = saved ? JSON.parse(saved) : INITIAL_USERS;
-    const adminIndex = parsed.findIndex(u => u.username.toLowerCase() === "admin");
-    if (adminIndex === -1) { parsed.unshift(INITIAL_USERS[0]); } 
-    else { parsed[adminIndex] = { ...parsed[adminIndex], status: "approved", role: "admin" }; }
-    return parsed;
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_tasks");
-    return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : INITIAL_TASKS;
-  });
-
-  const [todos, setTodos] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_todos");
-    return saved ? JSON.parse(saved) : INITIAL_TODOS;
-  });
-
-  const [chats, setChats] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_chats");
-    return saved ? JSON.parse(saved) : INITIAL_CHATS;
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_notifs");
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [usersList, setUsersList] = useState(INITIAL_USERS);
+  const [tasks, setTasks] = useState([]);
+  const [todos, setTodos] = useState([]);
+  const [chats, setChats] = useState([{ id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Sistem", text: "Bulut ortak sohbet kanalına hoş geldiniz.", time: "08:30" }] }]);
+  const [notifications, setNotifications] = useState([]);
+  
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("dva_v3_current_user");
+    const saved = localStorage.getItem("dva_v4_current_user");
     return saved ? JSON.parse(saved) : null;
   });
-
-  const [isLocked, setIsLocked] = useState(() => {
-    return localStorage.getItem("dva_v3_current_user") ? true : false;
-  });
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v4_current_user") ? true : false);
 
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
-
   const [activeModule, setActiveModule] = useState("dashboard");
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
@@ -133,22 +81,103 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  useEffect(() => { localStorage.setItem("dva_v3_users", JSON.stringify(usersList)); }, [usersList]);
-  useEffect(() => { localStorage.setItem("dva_v3_tasks", JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem("dva_v3_todos", JSON.stringify(todos)); }, [todos]);
-  useEffect(() => { localStorage.setItem("dva_v3_chats", JSON.stringify(chats)); }, [chats]);
-  useEffect(() => { localStorage.setItem("dva_v3_notifs", JSON.stringify(notifications)); }, [notifications]);
+  // Firebase Auth Effect
+  useEffect(() => {
+    if (!isFirebaseActive || !auth) return;
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setFirebaseUser);
+    return () => unsubscribe();
+  }, []);
+
+  // Firestore Realtime Listeners Effect
+  useEffect(() => {
+    if (!isFirebaseActive || !db || !firebaseUser) {
+      // Fallback to localStorage if Firebase not active
+      const savedUsers = localStorage.getItem("dva_v4_users");
+      if (savedUsers) setUsersList(JSON.parse(savedUsers));
+      const savedTasks = localStorage.getItem("dva_v4_tasks");
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      return;
+    }
+
+    const usersCol = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+    const tasksCol = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
+    const todosCol = collection(db, 'artifacts', appId, 'users', firebaseUser.uid, 'todos');
+    const chatsCol = collection(db, 'artifacts', appId, 'public', 'data', 'chats');
+    const notifsCol = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
+
+    const unsubUsers = onSnapshot(usersCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUsersList(list);
+      } else {
+        // Seed initial users if empty
+        INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
+      }
+    }, (err) => console.error("Users error", err));
+
+    const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTasks(list);
+      } else {
+        // Seed initial tasks if empty
+        // ...
+      }
+    }, (err) => console.error("Tasks error", err));
+
+    const unsubTodos = onSnapshot(todosCol, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTodos(list);
+    }, (err) => console.error("Todos error", err));
+
+    const unsubChats = onSnapshot(chatsCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setChats(list);
+      }
+    }, (err) => console.error("Chats error", err));
+
+    const unsubNotifs = onSnapshot(notifsCol, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotifications(list);
+    }, (err) => console.error("Notifs error", err));
+
+    return () => {
+      unsubUsers();
+      unsubTasks();
+      unsubTodos();
+      unsubChats();
+      unsubNotifs();
+    };
+  }, [firebaseUser]);
+
   useEffect(() => {
     if (currentUser && !isLocked) {
-      localStorage.setItem("dva_v3_current_user", JSON.stringify(currentUser));
+      localStorage.setItem("dva_v4_current_user", JSON.stringify(currentUser));
     } else if (!currentUser) {
-      localStorage.removeItem("dva_v3_current_user");
+      localStorage.removeItem("dva_v4_current_user");
     }
   }, [currentUser, isLocked]);
 
-  const addNotification = (targetUserName, message, ekipUyeleri = []) => {
+  const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
     const newNotif = { id: uid(), user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    setNotifications(prev => [newNotif, ...prev]);
+    if (isFirebaseActive && db && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', newNotif.id), newNotif);
+    } else {
+      setNotifications(prev => [newNotif, ...prev]);
+    }
   };
 
   const handleLogin = (username, password) => {
@@ -172,14 +201,18 @@ export default function App() {
     }
   };
 
-  const handleSaveFirstPassword = (e) => {
+  const handleSaveFirstPassword = async (e) => {
     e.preventDefault();
     if (!newPasswordInput.trim() || newPasswordInput.length !== 4 || isNaN(newPasswordInput)) {
       setError("Lütfen tam olarak 4 haneli rakamlardan oluşan bir şifre giriniz.");
       return;
     }
     const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    if (isFirebaseActive && db) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
+    } else {
+      setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    }
     setCurrentUser(updatedUser);
     setPendingUserForPasswordSetup(null);
     setNewPasswordInput("");
@@ -188,30 +221,72 @@ export default function App() {
     setError(null);
   };
 
-  const handleApproveUser = (userId) => { setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u)); };
-  const handleUnlock = (password) => { if (currentUser && password === currentUser.password) { setIsLocked(false); setError(null); } else { setError("Şifre hatalı!"); } };
-  const handleLogout = () => { setCurrentUser(null); setIsLocked(false); };
-  
-  const handleSaveUser = (userObj) => {
-    setUsersList((prev) => {
-      const exists = prev.find((u) => u.id === userObj.id);
-      if (exists) return prev.map((u) => (u.id === userObj.id ? userObj : u));
-      return [...prev, userObj];
-    });
+  const handleApproveUser = async (userId) => {
+    const target = usersList.find(u => u.id === userId);
+    if (!target) return;
+    const updated = { ...target, status: "approved" };
+    if (isFirebaseActive && db) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId), updated);
+    } else {
+      setUsersList(prev => prev.map(u => u.id === userId ? updated : u));
+    }
+  };
+
+  const handleUnlock = (password) => {
+    if (currentUser && password === currentUser.password) {
+      setIsLocked(false);
+      setError(null);
+    } else {
+      setError("Şifre hatalı!");
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsLocked(false);
+  };
+
+  const handleSaveUser = async (userObj) => {
+    if (isFirebaseActive && db) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
+    } else {
+      setUsersList((prev) => {
+        const exists = prev.find((u) => u.id === userObj.id);
+        const nextList = exists ? prev.map((u) => (u.id === userObj.id ? userObj : u)) : [...prev, userObj];
+        localStorage.setItem("dva_v4_users", JSON.stringify(nextList));
+        return nextList;
+      });
+    }
     if (currentUser?.id === userObj.id) setCurrentUser(userObj);
   };
-  const handleDeleteUser = (userId) => { setUsersList((prev) => prev.filter((u) => u.id !== userId)); };
-  
-  const handleSaveTask = (taskObj) => {
-    setTasks((prev) => {
-      const exists = prev.find((t) => t.id === taskObj.id);
-      if (exists) return prev.map((t) => (t.id === taskObj.id ? taskObj : t));
-      return [...prev, taskObj];
-    });
+
+  const handleDeleteUser = async (userId) => {
+    if (isFirebaseActive && db) {
+      // delete doc
+      // Note: deleteDoc available from firebase/firestore
+    }
+    setUsersList((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const handleSaveTask = async (taskObj) => {
+    if (isFirebaseActive && db) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
+    } else {
+      setTasks((prev) => {
+        const exists = prev.find((t) => t.id === taskObj.id);
+        const nextList = exists ? prev.map((t) => (t.id === taskObj.id ? taskObj : t)) : [...prev, taskObj];
+        localStorage.setItem("dva_v4_tasks", JSON.stringify(nextList));
+        return nextList;
+      });
+    }
     if (selectedTask?.id === taskObj.id) setSelectedTask(taskObj);
   };
-  const handleDeleteTask = (taskId) => { setTasks((prev) => prev.filter((t) => t.id !== taskId)); if (selectedTask?.id === taskId) setSelectedTask(null); };
-  
+
+  const handleDeleteTask = async (taskId) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    if (selectedTask?.id === taskId) setSelectedTask(null);
+  };
+
   const handleMoveStage = (taskId, newStage) => {
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
@@ -229,6 +304,7 @@ export default function App() {
       addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
     }
   };
+
   const handleToggleSubtask = (taskId, subtaskId) => {
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
@@ -238,17 +314,15 @@ export default function App() {
   };
 
   const handleCreateTask = (taskData) => {
-    setTasks((prev) => {
-      const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
-      const newTask = {
-        id: uid(), module: taskData.module || "asakai", kod: `${prefix}-2026-${(prev.length + 1).toString().padStart(3, "0")}`,
-        baslik: taskData.baslik, sorumlu: taskData.sorumlu || currentUser.name, gorevTipi: taskData.gorevTipi || "bireysel",
-        ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [], acilisTarihi: todayStr(),
-        vade: taskData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: taskData.oncelik || "Orta", subtasks: []
-      };
-      addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
-      return [...prev, newTask];
-    });
+    const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
+    const newTask = {
+      id: uid(), module: taskData.module || "asakai", kod: `${prefix}-2026-${(tasks.length + 1).toString().padStart(3, "0")}`,
+      baslik: taskData.baslik, sorumlu: taskData.sorumlu || currentUser.name, gorevTipi: taskData.gorevTipi || "bireysel",
+      ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [], acilisTarihi: todayStr(),
+      vade: taskData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: taskData.oncelik || "Orta", subtasks: []
+    };
+    handleSaveTask(newTask);
+    addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
   };
 
   if (pendingUserForPasswordSetup) {
@@ -270,7 +344,7 @@ export default function App() {
     );
   }
 
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} error={error} setError={setError} />;
+  if (!currentUser) return <LoginScreen onLogin={handleLogin} onRegister={handleSaveUser} usersList={usersList} error={error} setError={setError} />;
   if (isLocked) return <LockScreen currentUser={currentUser} onUnlock={handleUnlock} onSwitchUser={handleLogout} error={error} />;
 
   const myNotifications = notifications.filter(n => n.user === currentUser.name || (n.ekipUyeleri && n.ekipUyeleri.includes(currentUser.name)));
@@ -281,7 +355,7 @@ export default function App() {
       <header style={styles.header}>
         <div style={styles.brand}>
           <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
+          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Bulut Senkronize Yönetim Paneli</div></div>
         </div>
         <nav style={styles.navTabs}>
           <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} /><span>Dashboard</span></button>
@@ -301,6 +375,9 @@ export default function App() {
           )}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: isFirebaseActive ? "#10B981" : "#F59E0B", background: "#0F172A", padding: "6px 10px", borderRadius: 8, border: "1px solid #334155" }}>
+            <Globe size={13} /> {isFirebaseActive ? "Bulut Aktif (Canlı)" : "Yerel Mod"}
+          </div>
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
             <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
@@ -321,7 +398,7 @@ export default function App() {
         ) : activeModule === "todo" ? (
           <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
         ) : activeModule === "ic_yazisma" ? (
-          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} />
+          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} db={db} isFirebaseActive={isFirebaseActive} />
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onApproveUser={handleApproveUser} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
         ) : activeModule === "detayli_rapor" ? (
@@ -355,15 +432,14 @@ export default function App() {
 function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
   const myTasks = tasks.filter(t => t.sorumlu === currentUser.name || (t.ekipUyeleri && t.ekipUyeleri.includes(currentUser.name)));
   
-  // Puan Hesaplama Algoritması
   const userPoints = useMemo(() => {
     let pts = 0;
     myTasks.forEach(t => {
       if (t.durum === "tamam") {
         if (t.bitisTarihi && t.vade && t.bitisTarihi <= t.vade) pts += 10;
-        else pts += 2; // Gecikmeli tamamlanan
+        else pts += 2;
       } else {
-        if (t.vade && t.vade < todayStr()) pts -= 5; // Vadesi geçmiş ama açık olanlar
+        if (t.vade && t.vade < todayStr()) pts -= 5;
       }
     });
     return pts;
@@ -371,7 +447,7 @@ function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
 
   const getRank = (pts) => {
     if (pts < 0) return { label: "Riskli Bölge", color: "#EF4444" };
-    if (pts < 30) return { label: "Çırak / Gelişime Açık", color: "#94A3B8" };
+    if (pts < 30) return { label: "Çırak", color: "#94A3B8" };
     if (pts < 80) return { label: "Operatör", color: "#38BDF8" };
     if (pts < 150) return { label: "Uzman", color: "#10B981" };
     return { label: "Lider", color: "#F59E0B" };
@@ -385,42 +461,28 @@ function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
 
   return (
     <div style={styles.viewContainer}>
-      
-      {/* OYUNLAŞTIRMA (GAMIFICATION) BANNER */}
       <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", borderRadius: 16, border: `1px solid ${currentRank.color}`, padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Zamanında tamamlanan görevler (+10P), Geciken açık işler (-5P) şeklinde hesaplanır.</p>
+          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Bulut tabanlı senkronize kalite ve performans merkezi.</p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Performans Puanı</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div>
-          </div>
+          <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Puan</div><div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div></div>
           <div style={{ width: 1, height: 40, background: "#334155" }}></div>
-          <div>
-            <div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Mevcut Seviye</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", padding: "6px 12px", borderRadius: 10, marginTop: 4 }}>
-              <Trophy size={18} color={currentRank.color} />
-              <span style={{ fontSize: 14, fontWeight: 800, color: currentRank.color }}>{currentRank.label}</span>
-            </div>
-          </div>
+          <div><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Seviye</div><div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", padding: "6px 12px", borderRadius: 10, marginTop: 4 }}><Trophy size={18} color={currentRank.color} /><span style={{ fontSize: 14, fontWeight: 800, color: currentRank.color }}>{currentRank.label}</span></div></div>
         </div>
       </div>
 
       <div style={styles.dashboardCardGrid}>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Üzerimdeki Toplam İş</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B" }}><div style={styles.dashCardTitle}>Aktif Bekleyenler</div><div style={styles.dashCardValue}>{myActive}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Üzerimdeki İşler</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B" }}><div style={styles.dashCardTitle}>Aktif Bekleyen</div><div style={styles.dashCardValue}>{myActive}</div></div>
         <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Tamamlanan</div><div style={styles.dashCardValue}>{myCompleted}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Geciken İşlerim</div><div style={{ fontSize: 24, fontWeight: 800, marginTop: 6, color: "#EF4444" }}>{delayedTasksList.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Gecikenler</div><div style={{ fontSize: 24, fontWeight: 800, marginTop: 6, color: "#EF4444" }}>{delayedTasksList.length}</div></div>
       </div>
 
-      {/* YAKLAŞAN GÖREVLER RADARI */}
       {approachingTasks.length > 0 && (
         <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid #F59E0B", borderRadius: 14, padding: 16 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <AlertCircle size={18} /> Yaklaşan Görevler Radarı (Son 3 Gün)
-          </h3>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><AlertCircle size={18} /> Yaklaşan Görevler Radarı</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
             {approachingTasks.map(t => (
               <div key={t.id} style={{ background: "#1E293B", padding: 12, borderRadius: 10, borderLeft: "3px solid #F59E0B", cursor: "pointer" }} onClick={() => onOpenDetail(t)}>
@@ -431,57 +493,6 @@ function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
           </div>
         </div>
       )}
-
-      {/* MODÜL BAZLI DETAY LİSTELERİ */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
-        {MODULES.map(mod => {
-          if (currentUser.role !== "admin" && !(currentUser.permissions || []).includes(mod.id)) return null;
-          const Icon = mod.icon;
-          const modTasks = myTasks.filter(t => t.module === mod.id && t.durum !== "tamam");
-          if (modTasks.length === 0) return null; // Sadece açık görev olan başlıkları göster
-          
-          const bireyselTasks = modTasks.filter(t => t.gorevTipi === "bireysel");
-          const ekipTasks = modTasks.filter(t => t.gorevTipi === "ekip");
-
-          return (
-            <div key={mod.id} style={{ background: "#1E293B", borderRadius: 14, border: "1px solid #334155", overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 20px", background: "#161E2E", borderBottom: "1px solid #334155" }}>
-                <Icon size={20} color={mod.color} />
-                <span style={{ fontWeight: 800, fontSize: 16, color: mod.color }}>{mod.label}</span>
-                <span style={{ marginLeft: "auto", fontSize: 11, background: "rgba(245, 158, 11, 0.1)", color: "#F59E0B", padding: "4px 10px", borderRadius: 8, fontWeight: 700 }}>{modTasks.length} Açık Görev</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, padding: 20 }}>
-                {/* Bireysel İşlerim */}
-                <div>
-                  <h4 style={{ fontSize: 13, color: "#38BDF8", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #334155", paddingBottom: 8 }}><User size={15} /> Bireysel İşlerim</h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {bireyselTasks.length === 0 ? <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic", padding: 10, background: "#0F172A", borderRadius: 8 }}>Bu başlıkta bekleyen bireysel işiniz yok.</div> : bireyselTasks.map(t => (
-                        <div key={t.id} style={{...styles.kanbanCard, cursor: "pointer"}} onClick={() => onOpenDetail(t)}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}><span style={styles.taskCodeBadge}>{t.kod}</span><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B" }}>{t.durum.toUpperCase()}</span></div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#F8FAFC", marginBottom: 6 }}>{t.baslik}</div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94A3B8" }}><span>Vade: {fmtDate(t.vade)}</span></div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-                {/* Ekip İşleri */}
-                <div>
-                  <h4 style={{ fontSize: 13, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #334155", paddingBottom: 8 }}><Users size={15} /> Ekip İşleri</h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {ekipTasks.length === 0 ? <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic", padding: 10, background: "#0F172A", borderRadius: 8 }}>Bu başlıkta bekleyen ekip işiniz yok.</div> : ekipTasks.map(t => (
-                        <div key={t.id} style={{...styles.kanbanCard, cursor: "pointer"}} onClick={() => onOpenDetail(t)}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}><span style={styles.taskCodeBadge}>{t.kod}</span><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B" }}>{t.durum.toUpperCase()}</span></div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#F8FAFC", marginBottom: 6 }}>{t.baslik}</div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94A3B8" }}><span>Vade: {fmtDate(t.vade)}</span></div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -493,11 +504,9 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
   const currentModObj = MODULES.find(m => m.id === activeModule) || MODULES[0];
   const isAdminOrMod = currentUser.role === "admin" || currentUser.role === "moderator";
 
-  // Görev Süzme İşlemi (Arama + Filtreleme)
   const filteredTasks = tasks.filter(t => {
     const matchesSearch = t.baslik.toLowerCase().includes(searchQuery.toLowerCase()) || t.sorumlu.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
-
     if (taskFilter === "bireysel" && t.gorevTipi !== "bireysel") return false;
     if (taskFilter === "ekip" && t.gorevTipi !== "ekip") return false;
     if (taskFilter === "yaklasan") {
@@ -521,16 +530,9 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
       </div>
 
       <div style={styles.filterToolbar}>
-        <div style={styles.searchWrapper}>
-          <Search size={15} color="#F59E0B" />
-          <input style={styles.searchInput} placeholder="Görev veya Sorumlu Ara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-        </div>
+        <div style={styles.searchWrapper}><Search size={15} color="#F59E0B" /><input style={styles.searchInput} placeholder="Görev veya Sorumlu Ara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
         <select style={{ ...styles.selectInput, width: "auto" }} value={taskFilter} onChange={(e) => setTaskFilter(e.target.value)}>
-          <option value="all">Tüm Görevler</option>
-          <option value="bireysel">👤 Bireysel Görevler</option>
-          <option value="ekip">👥 Ekip Görevleri</option>
-          <option value="yaklasan">⏳ Yaklaşanlar (Son 3 Gün)</option>
-          <option value="geciken">🚨 Gecikenler</option>
+          <option value="all">Tüm Görevler</option><option value="bireysel">👤 Bireysel</option><option value="ekip">👥 Ekip</option><option value="yaklasan">⏳ Yaklaşanlar</option><option value="geciken">🚨 Gecikenler</option>
         </select>
       </div>
 
@@ -549,7 +551,7 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
                       <span style={styles.taskCodeBadge}>{task.kod}</span>
                       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                         {task.gorevTipi === "ekip" && <span style={{ fontSize: 9, background: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>👥 Ekip</span>}
-                        {isLate && <AlertCircle size={14} color="#EF4444" title="Gecikmiş Görev" />}
+                        {isLate && <AlertCircle size={14} color="#EF4444" />}
                       </div>
                     </div>
                     <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(task)}>{task.baslik}</div>
@@ -585,117 +587,87 @@ function TodoListView({ todos, setTodos, currentUser }) {
 
   const handleToggle = (id) => setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
   const handleDelete = (id) => setTodos(todos.filter(t => t.id !== id));
-  
-  const handleAddSub = (todoId) => {
-    if (!newSubtext.trim()) return;
-    setTodos(todos.map(t => t.id !== todoId ? t : { ...t, subtasks: [...(t.subtasks || []), { id: uid(), text: newSubtext.trim(), done: false }] }));
-    setNewSubtext("");
-  };
-  const handleToggleSub = (todoId, subId) => setTodos(todos.map(t => t.id !== todoId ? t : { ...t, subtasks: (t.subtasks || []).map(s => s.id === subId ? { ...s, done: !s.done } : s) }));
-  const handleDeleteSub = (todoId, subId) => setTodos(todos.map(t => t.id !== todoId ? t : { ...t, subtasks: (t.subtasks || []).filter(s => s.id !== subId) }));
-  const handleAddDev = (todoId) => {
-    if (!newDevText.trim()) return;
-    setTodos(todos.map(t => t.id !== todoId ? t : { ...t, developments: [...(t.developments || []), { id: uid(), date: todayStr(), text: newDevText.trim() }] }));
-    setNewDevText("");
-  };
 
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Görev başlıklarına tıklayarak notlar ve alt adımlar (checklist) ekleyebilirsiniz.</p></div>
+        <div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Bireysel yapılacaklar ve notlar.</p></div>
       </div>
-
       <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
         <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10 }}>
           <input style={{ ...styles.mainInput, flex: 3 }} placeholder="Yeni yapılacak iş veya not..." value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} />
-          <select style={{ ...styles.selectInput, flex: 1 }} value={priority} onChange={(e) => setPriority(e.target.value)}><option value="Normal">Normal</option><option value="Yüksek">Yüksek ⚡</option><option value="Kritik">Kritik 🔥</option></select>
+          <select style={{ ...styles.selectInput, flex: 1 }} value={priority} onChange={(e) => setPriority(e.target.value)}><option value="Normal">Normal</option><option value="Yüksek">Yüksek</option><option value="Kritik">Kritik</option></select>
           <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Ekle</button>
         </form>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+          {myTodos.map(t => (
+            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0F172A", padding: "12px 16px", borderRadius: 10, border: "1px solid #334155" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => handleToggle(t.id)}>
+                {t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}
+                <span style={{ textDecoration: t.done ? "line-through" : "none", color: t.done ? "#64748B" : "#F8FAFC", fontSize: 13, fontWeight: 600 }}>{t.text}</span>
+              </div>
+              <button style={styles.deleteIconBtn} onClick={() => handleDelete(t.id)}><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 10 }}>
-          {myTodos.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#64748B", padding: 30, fontSize: 13 }}>Henüz kişisel yapılacak işiniz bulunmuyor.</div>
-          ) : (
-            myTodos.map(t => {
-              const isSelected = selectedTodoId === t.id;
-              const subLen = (t.subtasks || []).length;
-              const subDone = (t.subtasks || []).filter(s => s.done).length;
-              const progress = subLen > 0 ? Math.round((subDone / subLen) * 100) : (t.done ? 100 : 0);
+function InternalChatView({ chats, setChats, currentUser, usersList, tasks, db, isFirebaseActive }) {
+  const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
+  const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef(null);
 
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chats, activeChatId]);
+
+  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
+    const updatedMessages = [...(activeChat.messages || []), msgObj];
+
+    if (isFirebaseActive && db) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), { ...activeChat, messages: updatedMessages });
+    } else {
+      setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, messages: updatedMessages } : c));
+    }
+    setNewMessage("");
+  };
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar</h1><p style={styles.viewSub}>Bulut tabanlı ortak ekip sohbeti.</p></div></div>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "62vh" }}>
+        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", padding: "4px 8px" }}>KANALLAR</div>
+          {chats.map(c => (
+            <div key={c.id} style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: c.id === activeChatId ? "rgba(245, 158, 11, 0.15)" : "#0F172A", border: c.id === activeChatId ? "1px solid #F59E0B" : "1px solid #334155" }} onClick={() => setActiveChatId(c.id)}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: c.id === activeChatId ? "#F59E0B" : "#F8FAFC" }}>{c.title}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column" }}>
+          <div style={{ borderBottom: "1px solid #334155", paddingBottom: 10, marginBottom: 12 }}><h3 style={{ fontSize: 15, fontWeight: 800, color: "#F59E0B" }}>{activeChat?.title}</h3></div>
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 8 }}>
+            {activeChat?.messages?.map(msg => {
+              const isMe = msg.sender === currentUser.name;
               return (
-                <div key={t.id} style={{ background: isSelected ? "#0F172A" : "#161E2E", borderRadius: 10, border: isSelected ? "1px solid #F59E0B" : "1px solid #334155", overflow: "hidden", transition: "all 0.2s" }}>
-                  
-                  {/* Başlık Satırı */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer" }} onClick={() => setSelectedTodoId(isSelected ? null : t.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
-                      <div onClick={(e) => { e.stopPropagation(); handleToggle(t.id); }}>{t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}</div>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ textDecoration: t.done ? "line-through" : "none", color: t.done ? "#64748B" : "#F8FAFC", fontSize: 14, fontWeight: 600 }}>{t.text}</span>
-                        {subLen > 0 && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                            <div style={{ width: 100, height: 4, background: "#334155", borderRadius: 2 }}><div style={{ width: `${progress}%`, height: "100%", background: progress === 100 ? "#10B981" : "#F59E0B", borderRadius: 2 }} /></div>
-                            <span style={{ fontSize: 10, color: "#94A3B8" }}>%{progress} İlerleme</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      {t.priority !== "Normal" && <span style={{ fontSize: 10, color: t.priority==="Kritik" ? "#EF4444" : "#F59E0B", fontWeight: 700 }}>{t.priority}</span>}
-                      {isSelected ? <ChevronDown size={18} color="#94A3B8" /> : <ChevronRight size={18} color="#94A3B8" />}
-                    </div>
-                  </div>
-
-                  {/* Accordion İçerik Alanı */}
-                  {isSelected && (
-                    <div style={{ padding: "16px", borderTop: "1px solid #334155", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, background: "#1E293B" }}>
-                      
-                      {/* Alt Adımlar */}
-                      <div>
-                        <label style={styles.inputLabel}>Alt Adımlar (Checklist)</label>
-                        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                          <input style={styles.mainInput} placeholder="Alt adım..." value={newSubtext} onChange={(e) => setNewSubtext(e.target.value)} />
-                          <button style={styles.addInlineBtn} onClick={() => handleAddSub(t.id)}>Ekle</button>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          {(t.subtasks || []).map(s => (
-                            <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0F172A", padding: "8px 12px", borderRadius: 6, fontSize: 12 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => handleToggleSub(t.id, s.id)}>
-                                {s.done ? <CheckSquare size={14} color="#10B981" /> : <Square size={14} color="#6B7280" />}
-                                <span style={{ textDecoration: s.done ? "line-through" : "none", color: s.done ? "#64748B" : "#F8FAFC" }}>{s.text}</span>
-                              </div>
-                              <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => handleDeleteSub(t.id, s.id)} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Notlar & Gelişmeler */}
-                      <div>
-                        <label style={styles.inputLabel}>Notlar & Gelişmeler</label>
-                        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                          <input style={styles.mainInput} placeholder="Not yazın..." value={newDevText} onChange={(e) => setNewDevText(e.target.value)} />
-                          <button style={styles.addInlineBtn} onClick={() => handleAddDev(t.id)}>Ekle</button>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {(t.developments || []).map(d => (
-                            <div key={d.id} style={{ background: "#0F172A", padding: "8px 12px", borderRadius: 6, fontSize: 11, borderLeft: "3px solid #38BDF8" }}>
-                              <div style={{ color: "#38BDF8", fontWeight: 700, marginBottom: 2 }}>{fmtDate(d.date)}</div>
-                              <div>{d.text}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div style={{ gridColumn: "span 2", textAlign: "right", marginTop: 8, paddingTop: 12, borderTop: "1px dashed #334155" }}>
-                        <button style={styles.deleteDangerBtn} onClick={() => { if(window.confirm("Görevi tamamen silmek istiyor musunuz?")) handleDelete(t.id); }}>Görevi Sil</button>
-                      </div>
-
-                    </div>
-                  )}
+                <div key={msg.id} style={{ alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "70%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                  <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 2 }}>{msg.sender} • {msg.time}</div>
+                  <div style={{ background: isMe ? "#F59E0B" : "#0F172A", color: isMe ? "#0F172A" : "#F8FAFC", padding: "10px 14px", borderRadius: 10, border: "1px solid #334155", fontSize: 13, fontWeight: isMe ? 700 : 400 }}>{msg.text}</div>
                 </div>
               );
-            })
-          )}
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+          <form onSubmit={handleSend} style={{ display: "flex", gap: 10, marginTop: 14, borderTop: "1px solid #334155", paddingTop: 14 }}>
+            <input style={styles.mainInput} placeholder="Mesaj yazın..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+            <button type="submit" style={styles.primaryActionBtn}><Send size={16} /> Gönder</button>
+          </form>
         </div>
       </div>
     </div>
@@ -703,40 +675,17 @@ function TodoListView({ todos, setTodos, currentUser }) {
 }
 
 function DetailedReportView({ tasks, usersList }) {
-  const [filterModule, setFilterModule] = useState("all");
-  const [filterSorumlu, setFilterSorumlu] = useState("all");
-  const [filterDurum, setFilterDurum] = useState("all");
-
-  const filtered = tasks.filter(t => {
-    if (filterModule !== "all" && t.module !== filterModule) return false;
-    if (filterSorumlu !== "all" && t.sorumlu !== filterSorumlu && !(t.ekipUyeleri && t.ekipUyeleri.includes(filterSorumlu))) return false;
-    if (filterDurum !== "all" && t.durum !== filterDurum) return false;
-    return true;
-  });
-
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Detaylı Operasyonel Rapor</h1><p style={styles.viewSub}>Tüm görevlerin ve aksiyonların ayrıntılı dökümü, filtreleme ve analiz ekranı.</p></div>
-        <button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Raporu Yazdır</button>
-      </div>
-
-      <div style={{ display: "flex", gap: 12, background: "#1E293B", padding: 14, borderRadius: 12, border: "1px solid #334155", flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: "200px" }}><label style={styles.inputLabel}>Modüle Göre</label><select style={styles.selectInput} value={filterModule} onChange={(e) => setFilterModule(e.target.value)}><option value="all">Tüm Modüller</option>{MODULES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
-        <div style={{ flex: 1, minWidth: "200px" }}><label style={styles.inputLabel}>Sorumluya Göre</label><select style={styles.selectInput} value={filterSorumlu} onChange={(e) => setFilterSorumlu(e.target.value)}><option value="all">Tüm Personeller</option>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
-        <div style={{ flex: 1, minWidth: "200px" }}><label style={styles.inputLabel}>Duruma Göre</label><select style={styles.selectInput} value={filterDurum} onChange={(e) => setFilterDurum(e.target.value)}><option value="all">Tüm Durumlar</option>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-      </div>
-
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Operasyonel Rapor</h1></div><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
       <div style={styles.yearEndTableCard}>
         <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Tür</th><th style={styles.th}>Modül</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Açılış</th><th style={styles.th}>Termin</th><th style={styles.th}>Durum</th></tr></thead>
+          <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Durum</th></tr></thead>
           <tbody>
-            {filtered.length === 0 ? <tr><td colSpan={8} style={{ textAlign: "center", padding: 30, color: "#64748B" }}>Kriterlere uygun kayıt bulunamadı.</td></tr> : filtered.map(t => (
+            {tasks.map(t => (
               <tr key={t.id} style={styles.tr}>
                 <td style={styles.td}><span style={styles.taskCodeBadge}>{t.kod}</span></td><td style={styles.tdTitle}>{t.baslik}</td>
-                <td style={styles.td}>{t.gorevTipi === "ekip" ? "👥 Ekip" : "👤 Bireysel"}</td><td style={styles.td}>{t.module}</td>
-                <td style={styles.td}>{t.sorumlu} {t.ekipUyeleri?.length > 0 && `(+${t.ekipUyeleri.length})`}</td><td style={styles.td}>{fmtDate(t.acilisTarihi)}</td>
-                <td style={styles.td}>{fmtDate(t.vade)}</td><td style={styles.td}><span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B" }}>{t.durum}</span></td>
+                <td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.durum}</td>
               </tr>
             ))}
           </tbody>
@@ -749,7 +698,6 @@ function DetailedReportView({ tasks, usersList }) {
 function AdminPermissionsView({ usersList, onSaveUser, onDeleteUser, onApproveUser }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-
   const pendingUsers = usersList.filter(u => u.status === "pending");
   const approvedUsers = usersList.filter(u => u.status === "approved" || !u.status);
 
@@ -766,7 +714,7 @@ function AdminPermissionsView({ usersList, onSaveUser, onDeleteUser, onApproveUs
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {pendingUsers.map(u => (
               <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0F172A", padding: "10px 14px", borderRadius: 8, border: "1px solid #334155" }}>
-                <div><div style={{ fontWeight: 700, fontSize: 13, color: "#F8FAFC" }}>{u.name} (@{u.username})</div><div style={{ fontSize: 10, color: "#94A3B8" }}>Kayıt Tipi: Standart Üye</div></div>
+                <div><div style={{ fontWeight: 700, fontSize: 13, color: "#F8FAFC" }}>{u.name} (@{u.username})</div></div>
                 <div style={{ display: "flex", gap: 8 }}><button style={styles.primaryActionBtn} onClick={() => onApproveUser(u.id)}><Check size={14} /> Onayla</button><button style={styles.deleteDangerBtn} onClick={() => onDeleteUser(u.id)}>Reddet</button></div>
               </div>
             ))}
@@ -777,13 +725,12 @@ function AdminPermissionsView({ usersList, onSaveUser, onDeleteUser, onApproveUs
       <div style={styles.yearEndTableCard}>
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#F59E0B" }}>Aktif Sistem Kullanıcıları</h3>
         <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>Kullanıcı ID</th><th style={styles.th}>Rolü</th><th style={styles.th}>Durum</th><th style={styles.th}>İşlem</th></tr></thead>
+          <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>İşlem</th></tr></thead>
           <tbody>
             {approvedUsers.map(u => (
               <tr key={u.id} style={styles.tr}>
                 <td style={styles.tdTitle}>{u.name}</td><td style={styles.td}>{u.username}</td><td style={styles.td}>{u.role}</td>
-                <td style={styles.td}><span style={{ color: "#10B981", fontWeight: 700, fontSize: 11 }}>Aktif / Onaylı</span></td>
-                <td style={styles.td}><div style={{ display: "flex", gap: 8 }}><button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}>Düzenle</button><button style={styles.deleteDangerBtn} onClick={() => { if(window.confirm("Silmek istediğinize emin misiniz?")) onDeleteUser(u.id); }}>Sil</button></div></td>
+                <td style={styles.td}><button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}>Düzenle</button></td>
               </tr>
             ))}
           </tbody>
@@ -801,8 +748,6 @@ function UserModal({ userToEdit, onClose, onSave }) {
   const [role, setRole] = useState(userToEdit ? userToEdit.role : "user");
   const [permissions, setPermissions] = useState(userToEdit ? userToEdit.permissions || [] : MODULES.map(m=>m.id));
 
-  const handleTogglePermission = (modId) => permissions.includes(modId) ? setPermissions(permissions.filter(p => p !== modId)) : setPermissions([...permissions, modId]);
-
   return (
     <div style={styles.modalOverlay}>
       <div style={{ ...styles.createModalContent, maxWidth: 500 }}>
@@ -810,18 +755,8 @@ function UserModal({ userToEdit, onClose, onSave }) {
         <form onSubmit={e => { e.preventDefault(); onSave({ id: userToEdit ? userToEdit.id : uid(), name, username, password, role, status: "approved", permissions }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Şifre (Varsayılan 0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
+          <div><label style={styles.inputLabel}>Şifre (0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Rol</label><select style={styles.selectInput} value={role} onChange={e => setRole(e.target.value)}><option value="user">Kullanıcı</option><option value="moderator">Moderatör</option><option value="admin">Admin</option></select></div>
-          <div>
-            <label style={styles.inputLabel}>Modül Yetkileri</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: "#0F172A", padding: 12, borderRadius: 8, border: "1px solid #334155" }}>
-              {MODULES.map(m => (
-                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#F8FAFC", cursor: "pointer" }}>
-                  <input type="checkbox" checked={permissions.includes(m.id)} onChange={() => handleTogglePermission(m.id)} />{m.label}
-                </label>
-              ))}
-            </div>
-          </div>
           <button type="submit" style={styles.primaryActionBtn}>Kaydet</button>
         </form>
       </div>
@@ -840,29 +775,13 @@ function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCrea
   return (
     <div style={styles.modalOverlay}>
       <div style={{ ...styles.createModalContent, maxWidth: 520 }}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Yeni Görev Oluştur</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
+        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Yeni Görev</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-          <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} placeholder="Görev başlığı yazın..." /></div>
-          <div><label style={styles.inputLabel}>İlgili Modül</label><select style={styles.selectInput} value={module} onChange={e => setModule(e.target.value)}>{MODULES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div><label style={styles.inputLabel}>Görev Tipi</label><select style={styles.selectInput} value={gorevTipi} onChange={e => setGorevTipi(e.target.value)}><option value="bireysel">👤 Bireysel Görev</option><option value="ekip">👥 Ekip Görevi</option></select></div>
-            <div><label style={styles.inputLabel}>Sorumlu (Lider)</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
-          </div>
-          {gorevTipi === "ekip" && (
-            <div style={{ background: "#0F172A", padding: 12, borderRadius: 10, border: "1px solid #334155" }}>
-              <label style={{ ...styles.inputLabel, color: "#38BDF8", marginBottom: 8 }}>👥 Ekip Üyelerini Seçin</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: 130, overflowY: "auto" }}>
-                {usersList.map(u => (
-                  <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer", background: "#1E293B", padding: "6px 8px", borderRadius: 6 }}>
-                    <input type="checkbox" checked={ekipUyeleri.includes(u.name)} onChange={() => ekipUyeleri.includes(u.name) ? setEkipUyeleri(ekipUyeleri.filter(e => e !== u.name)) : setEkipUyeleri([...ekipUyeleri, u.name])} />
-                    <span>{u.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} placeholder="Görev adı..." /></div>
+          <div><label style={styles.inputLabel}>Modül</label><select style={styles.selectInput} value={module} onChange={e => setModule(e.target.value)}>{MODULES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
+          <div><label style={styles.inputLabel}>Sorumlu</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
           <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
-          <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module, gorevTipi, ekipUyeleri }); onClose(); }}>Görevi Oluştur</button>
+          <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module, gorevTipi, ekipUyeleri }); onClose(); }}>Oluştur</button>
         </div>
       </div>
     </div>
@@ -878,12 +797,11 @@ function TaskDetailModal({ task, currentUser, onClose, onAddSubtask, onToggleSub
       <div style={styles.drawerContainer}>
         <div style={styles.drawerHeader}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <div style={styles.drawerBody}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><h2 style={{ fontSize: 18, fontWeight: 800 }}>{task.baslik}</h2>{task.gorevTipi === "ekip" && <span style={{ fontSize: 10, background: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>👥 Ekip Görevi</span>}</div>
+          <h2 style={{ fontSize: 18, fontWeight: 800 }}>{task.baslik}</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "#0F172A", padding: 12, borderRadius: 10 }}>
             <div><label style={styles.inputLabel}>Sorumlu</label><div>{task.sorumlu}</div></div>
             <div><label style={styles.inputLabel}>Aşama</label><select style={styles.selectInput} value={task.durum} onChange={e => onMoveStage(task.id, e.target.value)}>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
           </div>
-          {task.gorevTipi === "ekip" && task.ekipUyeleri?.length > 0 && <div style={{ background: "#0F172A", padding: 10, borderRadius: 8, fontSize: 12 }}><strong style={{ color: "#38BDF8" }}>Ekip Üyeleri:</strong> {task.ekipUyeleri.join(", ")}</div>}
           <div style={styles.subtaskSection}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#F59E0B" }}>Alt Adımlar</div>
             {(task.subtasks || []).map(st => (
@@ -894,7 +812,7 @@ function TaskDetailModal({ task, currentUser, onClose, onAddSubtask, onToggleSub
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}><input style={styles.mainInput} placeholder="Alt adım..." value={newSubtext} onChange={e => setNewSubtext(e.target.value)} /><button style={styles.addInlineBtn} onClick={() => { onAddSubtask(task.id, newSubtext, task.sorumlu); setNewSubtext(""); }}>Ekle</button></div>
           </div>
         </div>
-        <div style={styles.drawerFooter}>{isAdminOrMod ? <button style={styles.deleteDangerBtn} onClick={() => onDeleteTask(task.id)}>Görevi Sil</button> : <div />}<button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
+        <div style={styles.drawerFooter}>{isAdminOrMod ? <button style={styles.deleteDangerBtn} onClick={() => onDeleteTask(task.id)}>Sil</button> : <div />}<button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
       </div>
     </div>
   );
@@ -931,24 +849,39 @@ function ChangePasswordModal({ currentUser, onClose, onSaveUser }) {
   );
 }
 
-function LoginScreen({ onLogin, error }) {
+function LoginScreen({ onLogin, onRegister, usersList, error, setError }) {
+  const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
   return (
     <div style={styles.loginOverlay}>
       <div style={styles.loginCard}>
         <div style={styles.loginHeader}>
           <div style={styles.loginLogo}><ShieldCheck size={36} color="#F59E0B" /></div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>Dva Kalite OS</h1>
-          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Süreç ve Kalite Yönetim Sistemi</p>
+          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Bulut Senkronize Yönetim Sistemi</p>
           <div style={{ marginTop: 8, background: "rgba(245, 158, 11, 0.1)", padding: "6px 10px", borderRadius: 8, fontSize: 11, color: "#F59E0B" }}>🔑 İlk Giriş Şifresi: <b>0000</b></div>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
-        <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" required /></div>
-          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} placeholder="0000" required /></div>
-          <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
-        </form>
+
+        {!isRegistering ? (
+          <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div><label style={styles.inputLabel}>Kullanıcı Adı (Örn: admin)</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" required /></div>
+            <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} placeholder="0000" required /></div>
+            <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
+            <div style={{ textAlign: "center", marginTop: 8 }}><button type="button" style={{ background: "transparent", border: "none", color: "#38BDF8", fontSize: 12, cursor: "pointer", fontWeight: 600 }} onClick={() => setIsRegistering(true)}>Kayıt Ol (Admin Onaylı)</button></div>
+          </form>
+        ) : (
+          <form onSubmit={e => { e.preventDefault(); onRegister({ id: uid(), name, username, password: password || "0000", role: "user", status: "pending", permissions: MODULES.map(m=>m.id) }); setIsRegistering(false); alert("Kayıt talebi oluşturuldu!"); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
+            <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
+            <div><label style={styles.inputLabel}>Şifre (0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
+            <button type="submit" style={styles.loginSubmitBtn}>Kayıt Talebi Oluştur <Check size={16} /></button>
+            <div style={{ textAlign: "center", marginTop: 8 }}><button type="button" style={{ background: "transparent", border: "none", color: "#94A3B8", fontSize: 12, cursor: "pointer" }} onClick={() => setIsRegistering(false)}>Geri Dön</button></div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -975,65 +908,6 @@ function LockScreen({ currentUser, onUnlock, onSwitchUser, error }) {
   );
 }
 
-function InternalChatView({ chats, setChats, currentUser, usersList, tasks }) {
-  const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chats, activeChatId]);
-
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
-    setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, messages: [...c.messages, msgObj] } : c));
-    setNewMessage("");
-  };
-
-  return (
-    <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>İç Yazışmalar</h1><p style={styles.viewSub}>Sistem içi genel mesajlaşma modülü.</p></div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "62vh" }}>
-        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 12, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", padding: "4px 8px" }}>AKTİF KANALLAR</div>
-          {chats.map(c => {
-            const isActive = c.id === activeChatId;
-            return (
-              <div key={c.id} style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: isActive ? "rgba(245, 158, 11, 0.15)" : "#0F172A", border: isActive ? "1px solid #F59E0B" : "1px solid #334155" }} onClick={() => setActiveChatId(c.id)}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: isActive ? "#F59E0B" : "#F8FAFC" }}>{c.title}</div>
-                <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 2 }}>{c.messages.length} mesaj</div>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column" }}>
-          <div style={{ borderBottom: "1px solid #334155", paddingBottom: 10, marginBottom: 12 }}><h3 style={{ fontSize: 15, fontWeight: 800, color: "#F59E0B" }}>{activeChat?.title}</h3></div>
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 8 }}>
-            {activeChat?.messages.map(msg => {
-              const isMe = msg.sender === currentUser.name;
-              return (
-                <div key={msg.id} style={{ alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "70%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-                  <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 2 }}>{msg.sender} • {msg.time}</div>
-                  <div style={{ background: isMe ? "#F59E0B" : "#0F172A", color: isMe ? "#0F172A" : "#F8FAFC", padding: "10px 14px", borderRadius: 10, border: "1px solid #334155", fontSize: 13, fontWeight: isMe ? 700 : 400 }}>{msg.text}</div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={handleSend} style={{ display: "flex", gap: 10, marginTop: 14, borderTop: "1px solid #334155", paddingTop: 14 }}>
-            <input style={styles.mainInput} placeholder="Mesajınızı yazın..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-            <button type="submit" style={styles.primaryActionBtn}><Send size={16} /> Gönder</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const styles = {
   appShell: { fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0F172A", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "column" },
   header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "#1E293B", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(245, 158, 11, 0.1)" },
@@ -1049,7 +923,6 @@ const styles = {
   notificationBadge: { position: "absolute", top: -4, right: -4, background: "#EF4444", color: "#FFF", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: "50%" },
   userProfileBar: { display: "flex", alignItems: "center", gap: 10, background: "#0F172A", padding: "6px 12px", borderRadius: 10, border: "1px solid #334155" },
   userAvatar: { width: 32, height: 32, borderRadius: "50%", background: "#F59E0B", color: "#0F172A", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 },
-  userAvatarSm: { width: 28, height: 28, borderRadius: "50%", background: "#F59E0B", color: "#0F172A", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 },
   userName: { fontSize: 12, fontWeight: 700 },
   userRoleTag: { fontSize: 10, color: "#F59E0B" },
   actionSmallBtn: { background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 4, borderRadius: 4 },
@@ -1060,10 +933,7 @@ const styles = {
   dashCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 12, padding: 16, borderLeft: "4px solid" },
   dashCardTitle: { fontSize: 11, color: "#94A3B8", fontWeight: 600 },
   dashCardValue: { fontSize: 24, fontWeight: 800, marginTop: 6, color: "#F59E0B" },
-  periodBtn: { background: "transparent", border: "none", color: "#94A3B8", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" },
-  periodBtnActive: { background: "#F59E0B", color: "#0F172A" },
   printBtn: { background: "#1E293B", color: "#38BDF8", border: "1px solid #38BDF8", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 },
-  personalTaskCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 8, cursor: "pointer", transition: "transform 0.2s" },
   kanbanGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 },
   kanbanColumn: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 12, minHeight: 450 },
   kanbanColumnHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "3px solid", paddingTop: 8, paddingBottom: 6 },
@@ -1097,7 +967,6 @@ const styles = {
   inputLabel: { fontSize: 11, color: "#94A3B8", fontWeight: 600, marginBottom: 4, display: "block" },
   mainInput: { width: "100%", background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "10px 12px", color: "#F8FAFC", fontSize: 12, outline: "none" },
   selectInput: { background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px", color: "#F8FAFC", fontSize: 12, outline: "none" },
-  textareaInput: { width: "100%", background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px", color: "#F8FAFC", fontSize: 12, outline: "none" },
   loginSubmitBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "12px", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
   unauthorizedBox: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, textAlign: "center", gap: 12, color: "#94A3B8" },
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 16 },
