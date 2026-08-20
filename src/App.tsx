@@ -12,12 +12,10 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
 
-// Güvenli Firebase ve LocalStorage Hibrit Başlatıcı (Vite Env + Bolt uyumlu)
-let app, auth, db, appId = 'dva-kalite-os-cloud-v1';
+let app, auth, db, appId = 'asistan-live-workspace-v2';
 let isFirebaseActive = false;
 
 try {
-  // Sizin Firebase Projenize Ait Bilgiler (Otomatik Bağlantı)
   let firebaseConfig = {
     apiKey: "AIzaSyCK9WtWTyXxKTY45Mzw0kV4sPsfCIrwUG8",
     authDomain: "asistanv2-206bc.firebaseapp.com",
@@ -76,10 +74,10 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("dva_v9_current_user");
+    const saved = localStorage.getItem("asistan_current_user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v9_current_user") ? true : false);
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("asistan_current_user") ? true : false);
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
@@ -91,14 +89,13 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  // Firebase Auth & Sync
   useEffect(() => {
     if (!isFirebaseActive) {
-      const savedModules = localStorage.getItem("dva_v9_modules");
+      const savedModules = localStorage.getItem("asistan_modules");
       if (savedModules) setModulesList(JSON.parse(savedModules));
-      const savedUsers = localStorage.getItem("dva_v9_users");
+      const savedUsers = localStorage.getItem("asistan_users");
       if (savedUsers) setUsersList(JSON.parse(savedUsers));
-      const savedTasks = localStorage.getItem("dva_v9_tasks");
+      const savedTasks = localStorage.getItem("asistan_tasks");
       if (savedTasks) setTasks(JSON.parse(savedTasks));
       return;
     }
@@ -111,7 +108,7 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (e) {
-        console.error("Auth error:", e);
+        console.warn("Auth warning:", e);
       }
     };
     initAuth();
@@ -151,7 +148,7 @@ export default function App() {
         setChats(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       } else {
         setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', 'chat-genel'), {
-          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, bulut sistemine hoş geldiniz.", time: "08:30" }]
+          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, ASİSTAN canlı çalışma alanımıza hoş geldiniz.", time: "08:30" }]
         });
       }
     }, () => {});
@@ -167,14 +164,14 @@ export default function App() {
 
   useEffect(() => {
     if (!isFirebaseActive) {
-      localStorage.setItem("dva_v9_modules", JSON.stringify(modulesList));
-      localStorage.setItem("dva_v9_users", JSON.stringify(usersList));
-      localStorage.setItem("dva_v9_tasks", JSON.stringify(tasks));
+      localStorage.setItem("asistan_modules", JSON.stringify(modulesList));
+      localStorage.setItem("asistan_users", JSON.stringify(usersList));
+      localStorage.setItem("asistan_tasks", JSON.stringify(tasks));
     }
     if (currentUser && !isLocked) {
-      localStorage.setItem("dva_v9_current_user", JSON.stringify(currentUser));
+      localStorage.setItem("asistan_current_user", JSON.stringify(currentUser));
     } else if (!currentUser) {
-      localStorage.removeItem("dva_v9_current_user");
+      localStorage.removeItem("asistan_current_user");
     }
   }, [currentUser, isLocked, modulesList, usersList, tasks]);
 
@@ -201,7 +198,7 @@ export default function App() {
       setActiveModule("dashboard");
       setError(null);
     } else {
-      setError("Hatalı Kullanıcı Adı veya Şifre!");
+      setError("Hataly Kullanıcı Adı veya Şifre! (İlk şifre: 0000)");
     }
   };
 
@@ -367,8 +364,8 @@ export default function App() {
         <div style={styles.loginCard}>
           <div style={styles.loginHeader}>
             <div style={styles.loginLogo}><Key size={36} color="#F59E0B" /></div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>4 Haneli Şifre Belirleyin</h1>
-            <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Hoş geldiniz, {pendingUserForPasswordSetup.name}. İlk giriş şifreniz doğrulandı. Lütfen kalıcı 4 haneli şifrenizi girin.</p>
+            <h1 style={{ fontSize: 22, fontWeight: 900, marginTop: 10, color: "#F59E0B", letterSpacing: "1px" }}>ASİSTAN</h1>
+            <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
           </div>
           {error && <div style={styles.errorBar}>{error}</div>}
           <form onSubmit={handleSaveFirstPassword} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
@@ -390,8 +387,8 @@ export default function App() {
     <div style={styles.appShell}>
       <header style={styles.header}>
         <div style={styles.brand}>
-          <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Bulut Senkronize Süreç Paneli</div></div>
+          <div style={styles.logoIcon}><Sparkles size={24} color="#F59E0B" /></div>
+          <div><div style={styles.brandName}>ASİSTAN</div><div style={styles.brandSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</div></div>
         </div>
         <nav style={styles.navTabs}>
           <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} /><span>Dashboard</span></button>
@@ -410,7 +407,7 @@ export default function App() {
           )}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-          {isFirebaseActive && <span title="Bulut Aktif" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, background: "rgba(16, 185, 129, 0.2)", color: "#10B981", padding: "4px 8px", borderRadius: 8 }}><Wifi size={12} /> Bulut Çevrimiçi</span>}
+          {isFirebaseActive && <span title="Canlı Senkronize Bulut Aktif" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, background: "rgba(16, 185, 129, 0.2)", color: "#10B981", padding: "4px 8px", borderRadius: 8 }}><Wifi size={12} /> Canlı Bulut Aktif</span>}
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
             <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
@@ -502,8 +499,8 @@ function DashboardView({ tasks, currentUser, modulesList, onOpenDetail, onNaviga
     <div style={styles.viewContainer}>
       <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", borderRadius: 16, border: `1px solid ${currentRank.color}`, padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Bulut senkronizasyonlu kalite merkezinizdesiniz.</p>
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>ASİSTAN Deneyimi: Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
+          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Puan</div><div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div></div>
@@ -563,7 +560,7 @@ function KanbanBoardView({ activeModule, modulesList, tasks, searchQuery, setSea
       <div style={styles.yearEndHeader}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: 10, borderRadius: 12 }}><Zap size={24} color={currentModObj.color} /></div>
-          <div><h1 style={styles.viewTitle}>{currentModObj.label} Panosu</h1><p style={styles.viewSub}>Kanban akış yönetimi ve grup/görev takibi.</p></div>
+          <div><h1 style={styles.viewTitle}>{currentModObj.label} Panosu (ASİSTAN)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div>
         </div>
         {isAdminOrMod && <button style={styles.primaryActionBtn} onClick={() => setShowNewModal(true)}><Plus size={16} /> Yeni Görev Ekle</button>}
       </div>
@@ -612,7 +609,7 @@ function TodoListView({ currentUser, db, appId, isFirebaseActive, firebaseUser }
 
   useEffect(() => {
     if (!isFirebaseActive) {
-      const saved = localStorage.getItem("dva_v9_todos");
+      const saved = localStorage.getItem("asistan_todos");
       if (saved) setTodos(JSON.parse(saved));
       return;
     }
@@ -624,7 +621,7 @@ function TodoListView({ currentUser, db, appId, isFirebaseActive, firebaseUser }
 
   useEffect(() => {
     if (!isFirebaseActive) {
-      localStorage.setItem("dva_v9_todos", JSON.stringify(todos));
+      localStorage.setItem("asistan_todos", JSON.stringify(todos));
     }
   }, [todos, isFirebaseActive]);
 
@@ -667,7 +664,7 @@ function TodoListView({ currentUser, db, appId, isFirebaseActive, firebaseUser }
 
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Bireysel yapılacaklar ve notlar.</p></div></div>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (ASİSTAN To-Do)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div></div>
       <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
         <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10 }}>
           <input style={{ ...styles.mainInput, flex: 3 }} placeholder="Yeni yapılacak iş veya not..." value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} />
@@ -716,7 +713,7 @@ function InternalChatView({ chats, setChats, currentUser, usersList, db, appId, 
 
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar</h1><p style={styles.viewSub}>Sistem içi genel mesajlaşma modülü.</p></div></div>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar (ASİSTAN Sohbet)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div></div>
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "62vh" }}>
         <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", padding: "4px 8px" }}>KANALLAR</div>
@@ -753,7 +750,7 @@ function InternalChatView({ chats, setChats, currentUser, usersList, db, appId, 
 function DetailedReportView({ tasks, usersList, modulesList }) {
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Operasyonel Rapor</h1></div><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Operasyonel Rapor (ASİSTAN)</h1></div><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
       <div style={styles.yearEndTableCard}>
         <table style={styles.table}>
           <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Durum</th></tr></thead>
@@ -780,7 +777,7 @@ function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Yetki, Üyelik & Ana Başlık Yönetimi</h1></div>
+        <div><h1 style={styles.viewTitle}>Yetki, Üyelik & Ana Başlık Yönetimi (ASİSTAN)</h1></div>
         <button style={styles.primaryActionBtn} onClick={() => { setEditingUser(null); setShowUserModal(true); }}><UserPlus size={16} /> Kullanıcı Ekle</button>
       </div>
 
@@ -792,7 +789,7 @@ function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser
           onAddModule(newModLabel.trim(), newModColor);
           setNewModLabel("");
         }} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <input style={{ ...styles.mainInput, flex: 2 }} placeholder="Başlık adı (Örn: AR-GE Projeleri)..." value={newModLabel} onChange={e => setNewModLabel(e.target.value)} required />
+          <input style={{ ...styles.mainInput, flex: 2 }} placeholder="Başlık adı (Örn: Projeler)..." value={newModLabel} onChange={e => setNewModLabel(e.target.value)} required />
           <input type="color" style={{ width: 44, height: 40, background: "transparent", border: "none", cursor: "pointer" }} value={newModColor} onChange={e => setNewModColor(e.target.value)} title="Renk Seçin" />
           <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Başlık Ekle</button>
         </form>
@@ -976,14 +973,14 @@ function LoginScreen({ onLogin, error }) {
     <div style={styles.loginOverlay}>
       <div style={styles.loginCard}>
         <div style={styles.loginHeader}>
-          <div style={styles.loginLogo}><ShieldCheck size={36} color="#F59E0B" /></div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>Dva Kalite OS</h1>
-          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Süreç ve Bulut Kalite Yönetim Sistemi</p>
+          <div style={styles.loginLogo}><Sparkles size={40} color="#F59E0B" /></div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, marginTop: 12, color: "#F59E0B", letterSpacing: "2px", fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: "0 2px 10px rgba(245, 158, 11, 0.3)" }}>ASİSTAN</h1>
+          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 600 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
         <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
-          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adınız..." required autoFocus /></div>
-          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifreniz..." required /></div>
+          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={username} onChange={e => setSearchQuery ? null : setUsername(e.target.value)} onInput={e => setUsername(e.target.value)} placeholder="Kullanıcı adınız..." required autoFocus /></div>
+          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onInput={e => setPassword(e.target.value)} placeholder="Şifreniz..." required /></div>
           <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
         </form>
       </div>
@@ -998,8 +995,8 @@ function LockScreen({ currentUser, onUnlock, onSwitchUser, error }) {
       <div style={styles.loginCard}>
         <div style={styles.loginHeader}>
           <div style={styles.loginLogo}><Lock size={36} color="#F59E0B" /></div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>Oturum Kilitli</h1>
-          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Tekrar hoş geldiniz, {currentUser.name}. Devam etmek için şifrenizi girin.</p>
+          <h1 style={{ fontSize: 24, fontWeight: 900, marginTop: 10, color: "#F59E0B", letterSpacing: "1px" }}>ASİSTAN</h1>
+          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
         <form onSubmit={e => { e.preventDefault(); onUnlock(password); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1017,7 +1014,7 @@ const styles = {
   header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "#1E293B", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(245, 158, 11, 0.1)" },
   brand: { display: "flex", alignItems: "center", gap: 10 },
   logoIcon: { background: "rgba(245, 158, 11, 0.15)", padding: 8, borderRadius: 10, display: "flex" },
-  brandName: { fontWeight: 800, fontSize: 16, color: "#F59E0B" },
+  brandName: { fontWeight: 900, fontSize: 18, color: "#F59E0B", letterSpacing: "1px" },
   brandSub: { fontSize: 10, color: "#94A3B8" },
   navTabs: { display: "flex", gap: 6, background: "#0F172A", padding: 4, borderRadius: 10, flexWrap: "wrap" },
   navTab: { display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" },
@@ -1065,7 +1062,7 @@ const styles = {
   deleteIconBtn: { background: "transparent", border: "none", color: "#EF4444", cursor: "pointer" },
   editIconBtn: { background: "transparent", border: "none", color: "#F59E0B", cursor: "pointer", fontWeight: 600, fontSize: 11, display: "flex", gap: 4, alignItems: "center" },
   loginOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 },
-  loginCard: { background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 16 },
+  loginCard: { background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" },
   loginHeader: { textAlign: "center" },
   loginLogo: { width: 64, height: 64, borderRadius: 16, background: "rgba(245, 158, 11, 0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center" },
   inputLabel: { fontSize: 11, color: "#94A3B8", fontWeight: 600, marginBottom: 4, display: "block" },
