@@ -8,6 +8,15 @@ import {
   Lock, Key, LogOut, Shield, ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Zap, Truck,
   FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy, FolderPlus
 } from "lucide-react";
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
+
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -38,62 +47,20 @@ const INITIAL_USERS = [
   { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", permissions: ["kalite_kontrol", "iyilestirme"] }
 ];
 
-const INITIAL_TASKS = [
-  { id: "tsk-1", module: "asakai", kod: "ASK-2026-001", baslik: "Vardiya A Hatası Giriş Kontrol Tespiti", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-01", vade: "2026-08-28", bitisTarihi: "", durum: "acik", oncelik: "Kritik", subtasks: [{ id: "st-1", text: "Karantinaya alınması", sorumlu: "Ahmet Yılmaz", done: true }] },
-  { id: "tsk-2", module: "iyilestirme", kod: "IYL-2026-001", baslik: "Pres Hattı Fire Oranını Düşürme Kaizen Projesi", sorumlu: "Selin Yıldız", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz", "Selin Yıldız"], acilisTarihi: "2026-08-10", vade: "2026-09-01", bitisTarihi: "", durum: "devam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-3", module: "kalite_guvence", kod: "KGV-2026-001", baslik: "ISO 9001 İç Tetkik Hazırlıkları ve Doküman Revizyonu", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz"], acilisTarihi: "2026-08-02", vade: "2026-08-25", bitisTarihi: "", durum: "devam", oncelik: "Kritik", subtasks: [] },
-  { id: "tsk-4", module: "kalite_kontrol", kod: "KKK-2026-001", baslik: "CNC Tezgah Parça Tolerans Ölçüm Doğrulaması", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-03", vade: "2026-08-15", bitisTarihi: "2026-08-14", durum: "tamam", oncelik: "Yüksek", subtasks: [] },
-  { id: "tsk-5", module: "tedarik_kalite", kod: "TRD-2026-001", baslik: "Sac Tedarikçisi ABC Metal hammadde girdi kontrolü", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-04", vade: "2026-08-30", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] }
-];
-
-const INITIAL_TODOS = [
-  { id: "td-1", user: "Sistem Yöneticisi (Admin)", text: "Haftalık KPI Raporlarını İncele", done: false, priority: "Yüksek", subtasks: [{ id: "ts-1", text: "Dashboard verilerini dışa aktar", done: true }], developments: [] }
-];
-
-const INITIAL_CHATS = [
-  { id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, sisteme hoş geldiniz.", time: "08:30" }] }
-];
-
 export default function App() {
-  const [modulesList, setModulesList] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_modules");
-    return saved ? JSON.parse(saved) : INITIAL_MODULES;
-  });
-
-  const [usersList, setUsersList] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_users");
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_tasks");
-    return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : INITIAL_TASKS;
-  });
-
-  const [todos, setTodos] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_todos");
-    return saved ? JSON.parse(saved) : INITIAL_TODOS;
-  });
-
-  const [chats, setChats] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_chats");
-    return saved ? JSON.parse(saved) : INITIAL_CHATS;
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_notifs");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [modulesList, setModulesList] = useState(INITIAL_MODULES);
+  const [usersList, setUsersList] = useState(INITIAL_USERS);
+  const [tasks, setTasks] = useState([]);
+  const [todos, setTodos] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("dva_v6_current_user");
+    const saved = localStorage.getItem("dva_v7_current_user");
     return saved ? JSON.parse(saved) : null;
   });
-
-  const [isLocked, setIsLocked] = useState(() => {
-    return localStorage.getItem("dva_v6_current_user") ? true : false;
-  });
-
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v7_current_user") ? true : false);
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
@@ -105,33 +72,107 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  useEffect(() => { localStorage.setItem("dva_v6_modules", JSON.stringify(modulesList)); }, [modulesList]);
-  useEffect(() => { localStorage.setItem("dva_v6_users", JSON.stringify(usersList)); }, [usersList]);
-  useEffect(() => { localStorage.setItem("dva_v6_tasks", JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem("dva_v6_todos", JSON.stringify(todos)); }, [todos]);
-  useEffect(() => { localStorage.setItem("dva_v6_chats", JSON.stringify(chats)); }, [chats]);
-  useEffect(() => { localStorage.setItem("dva_v6_notifs", JSON.stringify(notifications)); }, [notifications]);
-  
+  // 1. Firebase Authentication
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setFirebaseUser);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!firebaseUser) return;
+
+    // Listen to Modules
+    const unsubModules = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'modules'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setModulesList(loaded);
+      } else {
+        // Seed initial
+        INITIAL_MODULES.forEach(m => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', m.id), m));
+      }
+    }, (err) => console.error(err));
+
+    // Listen to Users
+    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setUsersList(loaded);
+      } else {
+        INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
+      }
+    }, (err) => console.error(err));
+
+    // Listen to Tasks
+    const unsubTasks = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setTasks(loaded);
+      } else {
+        // Seed initial tasks if empty
+        // We can skip auto-seeding tasks or seed default
+      }
+    }, (err) => console.error(err));
+
+    // Listen to Todos
+    const unsubTodos = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
+      const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setTodos(loaded);
+    }, (err) => console.error(err));
+
+    // Listen to Chats
+    const unsubChats = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'chats'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setChats(loaded);
+      } else {
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', 'chat-genel'), {
+          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, sisteme hoş geldiniz.", time: "08:30" }]
+        });
+      }
+    }, (err) => console.error(err));
+
+    // Listen to Notifications
+    const unsubNotifs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), (snapshot) => {
+      const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setNotifications(loaded);
+    }, (err) => console.error(err));
+
+    return () => {
+      unsubModules();
+      unsubUsers();
+      unsubTasks();
+      unsubTodos();
+      unsubChats();
+      unsubNotifs();
+    };
+  }, [firebaseUser]);
+
   useEffect(() => {
     if (currentUser && !isLocked) {
-      localStorage.setItem("dva_v6_current_user", JSON.stringify(currentUser));
+      localStorage.setItem("dva_v7_current_user", JSON.stringify(currentUser));
     } else if (!currentUser) {
-      localStorage.removeItem("dva_v6_current_user");
+      localStorage.removeItem("dva_v7_current_user");
     }
   }, [currentUser, isLocked]);
 
-  const addNotification = (targetUserName, message, ekipUyeleri = []) => {
-    const newNotif = { id: uid(), user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    setNotifications(prev => [newNotif, ...prev]);
+  const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
+    if (!firebaseUser) return;
+    const notifId = uid();
+    const newNotif = { user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), newNotif);
   };
 
   const handleLogin = (username, password) => {
     const found = usersList.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     if (found) {
-      if (found.status === "pending") {
-        setError("Hesabınız henüz Admin onayından geçmemiştir.");
-        return;
-      }
       if (found.password === "0000") {
         setPendingUserForPasswordSetup(found);
         setError(null);
@@ -146,14 +187,14 @@ export default function App() {
     }
   };
 
-  const handleSaveFirstPassword = (e) => {
+  const handleSaveFirstPassword = async (e) => {
     e.preventDefault();
     if (!newPasswordInput.trim() || newPasswordInput.length !== 4 || isNaN(newPasswordInput)) {
       setError("Lütfen tam olarak 4 haneli rakamlardan oluşan bir şifre giriniz.");
       return;
     }
     const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
     setCurrentUser(updatedUser);
     setPendingUserForPasswordSetup(null);
     setNewPasswordInput("");
@@ -162,83 +203,112 @@ export default function App() {
     setError(null);
   };
 
-  const handleApproveUser = (userId) => { setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u)); };
-  const handleUnlock = (password) => { if (currentUser && password === currentUser.password) { setIsLocked(false); setError(null); } else { setError("Şifre hatalı!"); } };
-  const handleLogout = () => { setCurrentUser(null); setIsLocked(false); };
-  
-  const handleSaveUser = (userObj) => {
-    setUsersList((prev) => {
-      const exists = prev.find((u) => u.id === userObj.id);
-      if (exists) return prev.map((u) => (u.id === userObj.id ? userObj : u));
-      return [...prev, userObj];
-    });
-    if (currentUser?.id === userObj.id) setCurrentUser(userObj);
-  };
-  const handleDeleteUser = (userId) => { setUsersList((prev) => prev.filter((u) => u.id !== userId)); };
-  
-  const handleAddModule = (label, color) => {
-    const newId = "mod_" + uid();
-    const newMod = { id: newId, label, color: color || "#38BDF8" };
-    setModulesList(prev => [...prev, newMod]);
-    // Admin yetkisine otomatik ekle
-    setUsersList(prev => prev.map(u => u.role === "admin" ? { ...u, permissions: [...(u.permissions || []), newId] } : u));
+  const handleUnlock = (password) => {
+    if (currentUser && password === currentUser.password) {
+      setIsLocked(false);
+      setError(null);
+    } else {
+      setError("Şifre hatalı!");
+    }
   };
 
-  const handleDeleteModule = (modId) => {
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsLocked(false);
+  };
+
+  const handleSaveUser = async (userObj) => {
+    if (!firebaseUser) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
+    if (currentUser?.id === userObj.id) setCurrentUser(userObj);
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!firebaseUser) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
+  };
+
+  const handleAddModule = async (label, color) => {
+    if (!firebaseUser) return;
+    const newId = "mod_" + uid();
+    const newMod = { id: newId, label, color: color || "#38BDF8" };
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', newId), newMod);
+    // Give admin permissions automatically
+    const adminUser = usersList.find(u => u.role === "admin");
+    if (adminUser) {
+      const updatedPerms = [...(adminUser.permissions || []), newId];
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', adminUser.id), { ...adminUser, permissions: updatedPerms });
+    }
+  };
+
+  const handleDeleteModule = async (modId) => {
+    if (!firebaseUser) return;
     if (modulesList.length <= 1) {
       setError("En az bir ana başlık kalmalıdır!");
       return;
     }
-    setModulesList(prev => prev.filter(m => m.id !== modId));
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', modId));
   };
 
-  const handleSaveTask = (taskObj) => {
-    setTasks((prev) => {
-      const exists = prev.find((t) => t.id === taskObj.id);
-      if (exists) return prev.map((t) => (t.id === taskObj.id ? taskObj : t));
-      return [...prev, taskObj];
-    });
+  const handleSaveTask = async (taskObj) => {
+    if (!firebaseUser) return;
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
     if (selectedTask?.id === taskObj.id) setSelectedTask(taskObj);
   };
-  const handleDeleteTask = (taskId) => { setTasks((prev) => prev.filter((t) => t.id !== taskId)); if (selectedTask?.id === taskId) setSelectedTask(null); };
-  
-  const handleMoveStage = (taskId, newStage) => {
+
+  const handleDeleteTask = async (taskId) => {
+    if (!firebaseUser) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId));
+    if (selectedTask?.id === taskId) setSelectedTask(null);
+  };
+
+  const handleMoveStage = async (taskId, newStage) => {
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
       const bitis = newStage === "tamam" ? todayStr() : target.bitisTarihi;
-      handleSaveTask({ ...target, durum: newStage, bitisTarihi: bitis });
+      await handleSaveTask({ ...target, durum: newStage, bitisTarihi: bitis });
     }
   };
 
-  const handleAddSubtask = (taskId, subText, subSorumlu) => {
-    if (!subText.trim()) return;
+  const handleAddSubtask = async (taskId, subText, subSorumlu) => {
+    if (!subText.trim() || !firebaseUser) return;
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
       const newSub = { id: uid(), text: subText.trim(), sorumlu: subSorumlu || target.sorumlu, done: false };
-      handleSaveTask({ ...target, subtasks: [...(target.subtasks || []), newSub] });
-      addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
-    }
-  };
-  const handleToggleSubtask = (taskId, subtaskId) => {
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const newSubs = (target.subtasks || []).map((st) => st.id === subtaskId ? { ...st, done: !st.done } : st );
-      handleSaveTask({ ...target, subtasks: newSubs });
+      await handleSaveTask({ ...target, subtasks: [...(target.subtasks || []), newSub] });
+      await addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
     }
   };
 
-  const handleCreateTask = (taskData) => {
-    setTasks((prev) => {
-      const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
-      const newTask = {
-        id: uid(), module: taskData.module || modulesList[0]?.id || "asakai", kod: `${prefix}-2026-${(prev.length + 1).toString().padStart(3, "0")}`,
-        baslik: taskData.baslik, sorumlu: taskData.sorumlu || currentUser.name, gorevTipi: taskData.gorevTipi || "bireysel",
-        ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [], acilisTarihi: todayStr(),
-        vade: taskData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: taskData.oncelik || "Orta", subtasks: []
-      };
-      addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
-      return [...prev, newTask];
-    });
+  const handleToggleSubtask = async (taskId, subtaskId) => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (target) {
+      const newSubs = (target.subtasks || []).map((st) => st.id === subtaskId ? { ...st, done: !st.done } : st );
+      await handleSaveTask({ ...target, subtasks: newSubs });
+    }
+  };
+
+  const handleCreateTask = async (taskData) => {
+    if (!firebaseUser) return;
+    const newId = uid();
+    const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
+    const newTask = {
+      id: newId,
+      module: taskData.module || modulesList[0]?.id || "asakai",
+      kod: `${prefix}-2026-${(tasks.length + 1).toString().padStart(3, "0")}`,
+      baslik: taskData.baslik,
+      sorumlu: taskData.sorumlu || currentUser.name,
+      gorevTipi: taskData.gorevTipi || "bireysel",
+      ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [],
+      acilisTarihi: todayStr(),
+      vade: taskData.vade || todayStr(),
+      bitisTarihi: "",
+      durum: "acik",
+      oncelik: taskData.oncelik || "Orta",
+      subtasks: []
+    };
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', newId), newTask);
+    await addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
   };
 
   if (pendingUserForPasswordSetup) {
@@ -271,7 +341,7 @@ export default function App() {
       <header style={styles.header}>
         <div style={styles.brand}>
           <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
+          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Bulut Senkronize Süreç Paneli</div></div>
         </div>
         <nav style={styles.navTabs}>
           <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} /><span>Dashboard</span></button>
@@ -308,11 +378,11 @@ export default function App() {
         {activeModule === "dashboard" ? (
           <DashboardView tasks={tasks} usersList={usersList} currentUser={currentUser} modulesList={modulesList} onOpenDetail={(t) => setSelectedTask(t)} onNavigateModule={(modId) => setActiveModule(modId)} />
         ) : activeModule === "todo" ? (
-          <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
+          <TodoListView currentUser={currentUser} />
         ) : activeModule === "ic_yazisma" ? (
-          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} />
+          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} />
         ) : activeModule === "admin_panel" ? (
-          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onApproveUser={handleApproveUser} onAddModule={handleAddModule} onDeleteModule={handleDeleteModule} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
+          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onAddModule={handleAddModule} onDeleteModule={handleDeleteModule} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
         ) : activeModule === "detayli_rapor" ? (
           (currentUser.role === "admin" || currentUser.role === "moderator") ? <DetailedReportView tasks={tasks} usersList={usersList} modulesList={modulesList} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Yok</h2></div>
         ) : (
@@ -335,7 +405,11 @@ export default function App() {
 
       {showPasswordModal && <ChangePasswordModal currentUser={currentUser} onClose={() => setShowPasswordModal(false)} onSaveUser={handleSaveUser} />}
       {showNotificationsModal && (
-        <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={() => { setNotifications(prev => prev.map(n => (n.user === currentUser.name || (n.ekipUyeleri && n.ekipUyeleri.includes(currentUser.name))) ? { ...n, read: true } : n)); }} />
+        <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={async () => {
+          for(const n of myNotifications) {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', n.id), { ...n, read: true });
+          }
+        }} />
       )}
     </div>
   );
@@ -376,7 +450,7 @@ function DashboardView({ tasks, currentUser, modulesList, onOpenDetail, onNaviga
       <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", borderRadius: 16, border: `1px solid ${currentRank.color}`, padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Kalite ve performans merkezinizdesiniz.</p>
+          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Bulut senkronizasyonlu kalite merkezinizdesiniz.</p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Puan</div><div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div></div>
@@ -480,27 +554,41 @@ function KanbanBoardView({ activeModule, modulesList, tasks, searchQuery, setSea
   );
 }
 
-function TodoListView({ todos, setTodos, currentUser }) {
+function TodoListView({ currentUser }) {
+  const [todos, setTodos] = useState([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
+      setTodos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+
   const [newTodoText, setNewTodoText] = useState("");
   const [priority, setPriority] = useState("Normal");
   const myTodos = todos.filter(t => t.user === currentUser.name);
 
-  const handleAddTodo = (e) => {
+  const handleAddTodo = async (e) => {
     e.preventDefault();
     if (!newTodoText.trim()) return;
-    const item = { id: uid(), user: currentUser.name, text: newTodoText.trim(), done: false, priority, subtasks: [], developments: [] };
-    setTodos([item, ...todos]);
+    const newId = uid();
+    const item = { id: newId, user: currentUser.name, text: newTodoText.trim(), done: false, priority, subtasks: [], developments: [] };
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', newId), item);
     setNewTodoText("");
   };
 
-  const handleToggle = (id) => setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
-  const handleDelete = (id) => setTodos(todos.filter(t => t.id !== id));
+  const handleToggle = async (id) => {
+    const t = todos.find(item => item.id === id);
+    if(t) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id), { ...t, done: !t.done });
+  };
+
+  const handleDelete = async (id) => {
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id));
+  };
 
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Bireysel yapılacaklar ve notlar.</p></div>
-      </div>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Bireysel yapılacaklar ve notlar.</p></div></div>
       <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
         <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10 }}>
           <input style={{ ...styles.mainInput, flex: 3 }} placeholder="Yeni yapılacak iş veya not..." value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} />
@@ -523,7 +611,7 @@ function TodoListView({ todos, setTodos, currentUser }) {
   );
 }
 
-function InternalChatView({ chats, setChats, currentUser, usersList, tasks }) {
+function InternalChatView({ chats, setChats, currentUser, usersList }) {
   const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
@@ -531,12 +619,13 @@ function InternalChatView({ chats, setChats, currentUser, usersList, tasks }) {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chats, activeChatId]);
 
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
-    setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, messages: [...c.messages, msgObj] } : c));
+    const updatedMessages = [...(activeChat.messages || []), msgObj];
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), { ...activeChat, messages: updatedMessages });
     setNewMessage("");
   };
 
@@ -597,14 +686,11 @@ function DetailedReportView({ tasks, usersList, modulesList }) {
   );
 }
 
-function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser, onApproveUser, onAddModule, onDeleteModule }) {
+function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser, onAddModule, onDeleteModule }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [newModLabel, setNewModLabel] = useState("");
   const [newModColor, setNewModColor] = useState("#38BDF8");
-
-  const pendingUsers = usersList.filter(u => u.status === "pending");
-  const approvedUsers = usersList.filter(u => u.status === "approved" || !u.status);
 
   return (
     <div style={styles.viewContainer}>
@@ -613,7 +699,6 @@ function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser
         <button style={styles.primaryActionBtn} onClick={() => { setEditingUser(null); setShowUserModal(true); }}><UserPlus size={16} /> Kullanıcı Ekle</button>
       </div>
 
-      {/* YENİ ANA BAŞLIK EKLEME BÖLÜMÜ */}
       <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><FolderPlus size={18} /> Yeni Ana Başlık / Pano Ekle</h3>
         <form onSubmit={e => {
@@ -637,26 +722,12 @@ function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser
         </div>
       </div>
 
-      {pendingUsers.length > 0 && (
-        <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid #F59E0B", borderRadius: 14, padding: 16 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>⏳ Onay Bekleyen Üyelik Talepleri ({pendingUsers.length})</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {pendingUsers.map(u => (
-              <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0F172A", padding: "10px 14px", borderRadius: 8, border: "1px solid #334155" }}>
-                <div><div style={{ fontWeight: 700, fontSize: 13, color: "#F8FAFC" }}>{u.name} (@{u.username})</div></div>
-                <div style={{ display: "flex", gap: 8 }}><button style={styles.primaryActionBtn} onClick={() => onApproveUser(u.id)}><Check size={14} /> Onayla</button><button style={styles.deleteDangerBtn} onClick={() => onDeleteUser(u.id)}>Reddet</button></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div style={styles.yearEndTableCard}>
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#F59E0B" }}>Aktif Sistem Kullanıcıları & Yetkileri</h3>
         <table style={styles.table}>
           <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>Erişebildiği Başlıklar</th><th style={styles.th}>İşlem</th></tr></thead>
           <tbody>
-            {approvedUsers.map(u => (
+            {usersList.map(u => (
               <tr key={u.id} style={styles.tr}>
                 <td style={styles.tdTitle}>{u.name}</td>
                 <td style={styles.td}>{u.username}</td>
@@ -669,7 +740,12 @@ function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser
                     })}
                   </div>
                 </td>
-                <td style={styles.td}><button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}><Edit2 size={13} /> Yetki & Düzenle</button></td>
+                <td style={styles.td}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}><Edit2 size={13} /> Düzenle</button>
+                    {u.username !== "admin" && <button style={styles.deleteDangerBtn} onClick={() => onDeleteUser(u.id)}>Sil</button>}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -702,7 +778,7 @@ function UserModal({ userToEdit, modulesList, onClose, onSave }) {
         <form onSubmit={e => { e.preventDefault(); onSave({ id: userToEdit ? userToEdit.id : uid(), name, username, password, role, status: "approved", permissions }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
+          <div><label style={styles.inputLabel}>İlk Şifre (0000 önerilir)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Rol</label><select style={styles.selectInput} value={role} onChange={e => setRole(e.target.value)}><option value="user">Kullanıcı</option><option value="moderator">Moderatör</option><option value="admin">Admin</option></select></div>
           <div>
             <label style={styles.inputLabel}>Erişebileceği Ana Başlıklar / Panolar</label>
@@ -817,7 +893,7 @@ function LoginScreen({ onLogin, error }) {
         <div style={styles.loginHeader}>
           <div style={styles.loginLogo}><ShieldCheck size={36} color="#F59E0B" /></div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>Dva Kalite OS</h1>
-          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Süreç ve Kalite Yönetim Sistemi</p>
+          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Süreç ve Bulut Kalite Yönetim Sistemi</p>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
         <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
