@@ -72,7 +72,7 @@ const INITIAL_CHATS = [
 ];
 
 export default function App() {
-  const [syncMode, setSyncMode] = useState('loading'); // loading, firebase, local
+  const [syncMode, setSyncMode] = useState('loading');
   const [firebaseUser, setFirebaseUser] = useState(null);
 
   const [modulesList, setModulesList] = useState(() => { try { return JSON.parse(localStorage.getItem("asistan_modules")) || INITIAL_MODULES; } catch(e) { return INITIAL_MODULES; } });
@@ -84,9 +84,6 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState(() => { try { return JSON.parse(localStorage.getItem("asistan_current_user")) || null; } catch(e) { return null; } });
   const [isLocked, setIsLocked] = useState(() => { return !!localStorage.getItem("asistan_current_user"); });
-
-  const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
-  const [newPasswordInput, setNewPasswordInput] = useState("");
 
   const [activeModule, setActiveModule] = useState("dashboard");
   const [dashboardFilter, setDashboardFilter] = useState("all");
@@ -131,7 +128,6 @@ export default function App() {
     if (syncMode !== 'firebase' || !firebaseUser) return;
 
     const unsubs = [];
-
     const handleSync = (colName, setter, initialData) => {
       return onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snapshot) => {
         if (snapshot.empty) {
@@ -203,11 +199,6 @@ export default function App() {
     const found = activeList.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     
     if (found) {
-      if (found.password === "0000") {
-        setPendingUserForPasswordSetup(found);
-        setError(null);
-        return;
-      }
       setCurrentUser(found);
       setIsLocked(false);
       setActiveModule("dashboard");
@@ -215,26 +206,6 @@ export default function App() {
     } else {
       setError("Hatalı Kullanıcı Adı veya Şifre!");
     }
-  };
-
-  const handleSaveFirstPassword = async (e) => {
-    e.preventDefault();
-    if (!newPasswordInput.trim() || newPasswordInput.length !== 4 || isNaN(newPasswordInput)) {
-      setError("Lütfen tam olarak 4 haneli rakam giriniz.");
-      return;
-    }
-    const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    if (syncMode === 'firebase' && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
-    } else {
-      setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    }
-    setCurrentUser(updatedUser);
-    setPendingUserForPasswordSetup(null);
-    setNewPasswordInput("");
-    setIsLocked(false);
-    setActiveModule("dashboard");
-    setError(null);
   };
 
   const handleSaveData = async (colName, item, stateSetter) => {
@@ -278,30 +249,6 @@ export default function App() {
     await handleSaveData('tasks', newTask, setTasks);
     addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
   };
-
-  if (pendingUserForPasswordSetup) {
-    return (
-      <div style={styles.loginOverlay}>
-        <div style={styles.loginCard}>
-          <div style={styles.loginHeader}>
-            <div style={styles.loginLogo}><Key size={36} color="#F59E0B" /></div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>4 Haneli Şifre Belirleyin</h1>
-            <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
-              Hoş geldiniz, {pendingUserForPasswordSetup.name}. İlk giriş şifresi (0000) doğrulandı.
-            </p>
-          </div>
-          {error && <div style={styles.errorBar}>{error}</div>}
-          <form onSubmit={handleSaveFirstPassword} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
-            <div>
-              <label style={styles.inputLabel}>Yeni Şifreniz</label>
-              <input type="password" maxLength={4} style={styles.mainInput} value={newPasswordInput} onChange={e => setNewPasswordInput(e.target.value)} required autoFocus />
-            </div>
-            <button type="submit" style={styles.loginSubmitBtn}>Kaydet ve Başla <ArrowRight size={16} /></button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} error={error} syncMode={syncMode} />;
