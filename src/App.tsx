@@ -12,11 +12,30 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
 
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// Güvenli Firebase ve LocalStorage Hibrit Başlatıcı (Vite Env + Bolt uyumlu)
+let app, auth, db, appId = 'dva-kalite-os-cloud-v1';
+let isFirebaseActive = false;
+
+try {
+  // Sizin Firebase Projenize Ait Bilgiler (Otomatik Bağlantı)
+  let firebaseConfig = {
+    apiKey: "AIzaSyCK9WtWTyXxKTY45Mzw0kV4sPsfCIrwUG8",
+    authDomain: "asistanv2-206bc.firebaseapp.com",
+    projectId: "asistanv2-206bc",
+    storageBucket: "asistanv2-206bc.firebasestorage.app",
+    messagingSenderId: "78097147227",
+    appId: "1:78097147227:web:ebd844b7834439072ee67e"
+  };
+
+  if (firebaseConfig && firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    isFirebaseActive = true;
+  }
+} catch (e) {
+  console.warn("Firebase bulut bağlantısı kurulamadı, yerel modda çalışılıyor.", e);
+}
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -57,10 +76,10 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("dva_v7_current_user");
+    const saved = localStorage.getItem("dva_v9_current_user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v7_current_user") ? true : false);
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v9_current_user") ? true : false);
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
@@ -72,13 +91,27 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  // 1. Firebase Authentication
+  // Firebase Auth & Sync
   useEffect(() => {
+    if (!isFirebaseActive) {
+      const savedModules = localStorage.getItem("dva_v9_modules");
+      if (savedModules) setModulesList(JSON.parse(savedModules));
+      const savedUsers = localStorage.getItem("dva_v9_users");
+      if (savedUsers) setUsersList(JSON.parse(savedUsers));
+      const savedTasks = localStorage.getItem("dva_v9_tasks");
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      return;
+    }
+
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth error:", e);
       }
     };
     initAuth();
@@ -87,87 +120,72 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!firebaseUser) return;
+    if (!isFirebaseActive || !firebaseUser) return;
 
-    // Listen to Modules
     const unsubModules = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'modules'), (snapshot) => {
       if (!snapshot.empty) {
-        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setModulesList(loaded);
+        setModulesList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       } else {
-        // Seed initial
         INITIAL_MODULES.forEach(m => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', m.id), m));
       }
-    }, (err) => console.error(err));
+    }, () => {});
 
-    // Listen to Users
     const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
       if (!snapshot.empty) {
-        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setUsersList(loaded);
+        setUsersList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       } else {
         INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
       }
-    }, (err) => console.error(err));
+    }, () => {});
 
-    // Listen to Tasks
     const unsubTasks = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snapshot) => {
-      if (!snapshot.empty) {
-        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setTasks(loaded);
-      } else {
-        // Seed initial tasks if empty
-        // We can skip auto-seeding tasks or seed default
-      }
-    }, (err) => console.error(err));
+      setTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
 
-    // Listen to Todos
     const unsubTodos = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
-      const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setTodos(loaded);
-    }, (err) => console.error(err));
+      setTodos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
 
-    // Listen to Chats
     const unsubChats = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'chats'), (snapshot) => {
       if (!snapshot.empty) {
-        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setChats(loaded);
+        setChats(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       } else {
         setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', 'chat-genel'), {
-          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, sisteme hoş geldiniz.", time: "08:30" }]
+          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, bulut sistemine hoş geldiniz.", time: "08:30" }]
         });
       }
-    }, (err) => console.error(err));
+    }, () => {});
 
-    // Listen to Notifications
     const unsubNotifs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), (snapshot) => {
-      const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setNotifications(loaded);
-    }, (err) => console.error(err));
+      setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
 
     return () => {
-      unsubModules();
-      unsubUsers();
-      unsubTasks();
-      unsubTodos();
-      unsubChats();
-      unsubNotifs();
+      unsubModules(); unsubUsers(); unsubTasks(); unsubTodos(); unsubChats(); unsubNotifs();
     };
   }, [firebaseUser]);
 
   useEffect(() => {
-    if (currentUser && !isLocked) {
-      localStorage.setItem("dva_v7_current_user", JSON.stringify(currentUser));
-    } else if (!currentUser) {
-      localStorage.removeItem("dva_v7_current_user");
+    if (!isFirebaseActive) {
+      localStorage.setItem("dva_v9_modules", JSON.stringify(modulesList));
+      localStorage.setItem("dva_v9_users", JSON.stringify(usersList));
+      localStorage.setItem("dva_v9_tasks", JSON.stringify(tasks));
     }
-  }, [currentUser, isLocked]);
+    if (currentUser && !isLocked) {
+      localStorage.setItem("dva_v9_current_user", JSON.stringify(currentUser));
+    } else if (!currentUser) {
+      localStorage.removeItem("dva_v9_current_user");
+    }
+  }, [currentUser, isLocked, modulesList, usersList, tasks]);
 
   const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
-    if (!firebaseUser) return;
     const notifId = uid();
-    const newNotif = { user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), newNotif);
+    const newNotif = { id: notifId, user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), newNotif);
+    } else {
+      setNotifications(prev => [newNotif, ...prev]);
+    }
   };
 
   const handleLogin = (username, password) => {
@@ -194,7 +212,11 @@ export default function App() {
       return;
     }
     const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
+    } else {
+      setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    }
     setCurrentUser(updatedUser);
     setPendingUserForPasswordSetup(null);
     setNewPasswordInput("");
@@ -218,47 +240,72 @@ export default function App() {
   };
 
   const handleSaveUser = async (userObj) => {
-    if (!firebaseUser) return;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
+    } else {
+      setUsersList(prev => {
+        const exists = prev.find(u => u.id === userObj.id);
+        if (exists) return prev.map(u => u.id === userObj.id ? userObj : u);
+        return [...prev, userObj];
+      });
+    }
     if (currentUser?.id === userObj.id) setCurrentUser(userObj);
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!firebaseUser) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
+    if (isFirebaseActive && firebaseUser) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
+    } else {
+      setUsersList(prev => prev.filter(u => u.id !== userId));
+    }
   };
 
   const handleAddModule = async (label, color) => {
-    if (!firebaseUser) return;
     const newId = "mod_" + uid();
     const newMod = { id: newId, label, color: color || "#38BDF8" };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', newId), newMod);
-    // Give admin permissions automatically
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', newId), newMod);
+    } else {
+      setModulesList(prev => [...prev, newMod]);
+    }
     const adminUser = usersList.find(u => u.role === "admin");
     if (adminUser) {
       const updatedPerms = [...(adminUser.permissions || []), newId];
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', adminUser.id), { ...adminUser, permissions: updatedPerms });
+      handleSaveUser({ ...adminUser, permissions: updatedPerms });
     }
   };
 
   const handleDeleteModule = async (modId) => {
-    if (!firebaseUser) return;
     if (modulesList.length <= 1) {
       setError("En az bir ana başlık kalmalıdır!");
       return;
     }
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', modId));
+    if (isFirebaseActive && firebaseUser) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', modId));
+    } else {
+      setModulesList(prev => prev.filter(m => m.id !== modId));
+    }
   };
 
   const handleSaveTask = async (taskObj) => {
-    if (!firebaseUser) return;
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
+    } else {
+      setTasks(prev => {
+        const exists = prev.find(t => t.id === taskObj.id);
+        if (exists) return prev.map(t => t.id === taskObj.id ? taskObj : t);
+        return [...prev, taskObj];
+      });
+    }
     if (selectedTask?.id === taskObj.id) setSelectedTask(taskObj);
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!firebaseUser) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId));
+    if (isFirebaseActive && firebaseUser) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId));
+    } else {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+    }
     if (selectedTask?.id === taskId) setSelectedTask(null);
   };
 
@@ -271,7 +318,7 @@ export default function App() {
   };
 
   const handleAddSubtask = async (taskId, subText, subSorumlu) => {
-    if (!subText.trim() || !firebaseUser) return;
+    if (!subText.trim()) return;
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
       const newSub = { id: uid(), text: subText.trim(), sorumlu: subSorumlu || target.sorumlu, done: false };
@@ -289,7 +336,6 @@ export default function App() {
   };
 
   const handleCreateTask = async (taskData) => {
-    if (!firebaseUser) return;
     const newId = uid();
     const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
     const newTask = {
@@ -307,7 +353,11 @@ export default function App() {
       oncelik: taskData.oncelik || "Orta",
       subtasks: []
     };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', newId), newTask);
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', newId), newTask);
+    } else {
+      setTasks(prev => [...prev, newTask]);
+    }
     await addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
   };
 
@@ -360,6 +410,7 @@ export default function App() {
           )}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+          {isFirebaseActive && <span title="Bulut Aktif" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, background: "rgba(16, 185, 129, 0.2)", color: "#10B981", padding: "4px 8px", borderRadius: 8 }}><Wifi size={12} /> Bulut Çevrimiçi</span>}
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
             <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
@@ -378,9 +429,9 @@ export default function App() {
         {activeModule === "dashboard" ? (
           <DashboardView tasks={tasks} usersList={usersList} currentUser={currentUser} modulesList={modulesList} onOpenDetail={(t) => setSelectedTask(t)} onNavigateModule={(modId) => setActiveModule(modId)} />
         ) : activeModule === "todo" ? (
-          <TodoListView currentUser={currentUser} />
+          <TodoListView currentUser={currentUser} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
         ) : activeModule === "ic_yazisma" ? (
-          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} />
+          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onAddModule={handleAddModule} onDeleteModule={handleDeleteModule} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
         ) : activeModule === "detayli_rapor" ? (
@@ -407,7 +458,9 @@ export default function App() {
       {showNotificationsModal && (
         <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={async () => {
           for(const n of myNotifications) {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', n.id), { ...n, read: true });
+            if (isFirebaseActive && firebaseUser) {
+              await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', n.id), { ...n, read: true });
+            }
           }
         }} />
       )}
@@ -554,15 +607,26 @@ function KanbanBoardView({ activeModule, modulesList, tasks, searchQuery, setSea
   );
 }
 
-function TodoListView({ currentUser }) {
+function TodoListView({ currentUser, db, appId, isFirebaseActive, firebaseUser }) {
   const [todos, setTodos] = useState([]);
 
   useEffect(() => {
+    if (!isFirebaseActive) {
+      const saved = localStorage.getItem("dva_v9_todos");
+      if (saved) setTodos(JSON.parse(saved));
+      return;
+    }
     const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
       setTodos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, []);
+  }, [isFirebaseActive]);
+
+  useEffect(() => {
+    if (!isFirebaseActive) {
+      localStorage.setItem("dva_v9_todos", JSON.stringify(todos));
+    }
+  }, [todos, isFirebaseActive]);
 
   const [newTodoText, setNewTodoText] = useState("");
   const [priority, setPriority] = useState("Normal");
@@ -573,17 +637,32 @@ function TodoListView({ currentUser }) {
     if (!newTodoText.trim()) return;
     const newId = uid();
     const item = { id: newId, user: currentUser.name, text: newTodoText.trim(), done: false, priority, subtasks: [], developments: [] };
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', newId), item);
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', newId), item);
+    } else {
+      setTodos(prev => [item, ...prev]);
+    }
     setNewTodoText("");
   };
 
   const handleToggle = async (id) => {
     const t = todos.find(item => item.id === id);
-    if(t) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id), { ...t, done: !t.done });
+    if(t) {
+      const updated = { ...t, done: !t.done };
+      if (isFirebaseActive && firebaseUser) {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id), updated);
+      } else {
+        setTodos(prev => prev.map(item => item.id === id ? updated : item));
+      }
+    }
   };
 
   const handleDelete = async (id) => {
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id));
+    if (isFirebaseActive && firebaseUser) {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id));
+    } else {
+      setTodos(prev => prev.filter(item => item.id !== id));
+    }
   };
 
   return (
@@ -611,7 +690,7 @@ function TodoListView({ currentUser }) {
   );
 }
 
-function InternalChatView({ chats, setChats, currentUser, usersList }) {
+function InternalChatView({ chats, setChats, currentUser, usersList, db, appId, isFirebaseActive, firebaseUser }) {
   const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
@@ -625,7 +704,13 @@ function InternalChatView({ chats, setChats, currentUser, usersList }) {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
     const updatedMessages = [...(activeChat.messages || []), msgObj];
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), { ...activeChat, messages: updatedMessages });
+    const updatedChat = { ...activeChat, messages: updatedMessages };
+    
+    if (isFirebaseActive && firebaseUser) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), updatedChat);
+    } else {
+      setChats(prev => prev.map(c => c.id === activeChat.id ? updatedChat : c));
+    }
     setNewMessage("");
   };
 
@@ -778,7 +863,7 @@ function UserModal({ userToEdit, modulesList, onClose, onSave }) {
         <form onSubmit={e => { e.preventDefault(); onSave({ id: userToEdit ? userToEdit.id : uid(), name, username, password, role, status: "approved", permissions }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>İlk Şifre (0000 önerilir)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
+          <div><label style={styles.inputLabel}>Şifre (Varsayılan 0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Rol</label><select style={styles.selectInput} value={role} onChange={e => setRole(e.target.value)}><option value="user">Kullanıcı</option><option value="moderator">Moderatör</option><option value="admin">Admin</option></select></div>
           <div>
             <label style={styles.inputLabel}>Erişebileceği Ana Başlıklar / Panolar</label>
