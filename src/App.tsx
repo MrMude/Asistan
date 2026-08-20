@@ -1,32 +1,13 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import {
   CheckSquare, Square, Plus, Trash2, Download, Upload, Sparkles,
   Calendar, Users, Target, AlertTriangle, CheckCircle2, Clock,
   Search, FileSpreadsheet, Layers, Send, Edit3, X, ShieldCheck,
   ListTodo, RefreshCw, Award, Wifi, WifiOff, Share2, Globe, UserPlus,
   Lock, Key, LogOut, Shield, ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Zap, Truck,
-  FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy
+  FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy, FolderPlus
 } from "lucide-react";
-
-let app, auth, db;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'dva-kalite-os-global';
-let isFirebaseActive = false;
-
-try {
-  if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-    const firebaseConfig = JSON.parse(__firebase_config);
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    isFirebaseActive = true;
-  }
-} catch (e) {
-  console.warn("Firebase offline mode / fallback active", e);
-}
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -36,12 +17,12 @@ const getDaysDiff = (target) => {
   return Math.ceil((new Date(target) - new Date(todayStr())) / (1000 * 60 * 60 * 24));
 };
 
-const MODULES = [
-  { id: "asakai", label: "Asakai Toplantısı", icon: Zap, color: "#F59E0B" },
-  { id: "iyilestirme", label: "İyileştirme Toplantısı", icon: RefreshCw, color: "#38BDF8" },
-  { id: "kalite_guvence", label: "Kalite Güvence", icon: ShieldCheck, color: "#10B981" },
-  { id: "kalite_kontrol", label: "Kalite Kontrol", icon: CheckSquare, color: "#A855F7" },
-  { id: "tedarik_kalite", label: "Tedarik Kalite", icon: Truck, color: "#EC4899" }
+const INITIAL_MODULES = [
+  { id: "asakai", label: "Asakai Toplantısı", color: "#F59E0B" },
+  { id: "iyilestirme", label: "İyileştirme Toplantısı", color: "#38BDF8" },
+  { id: "kalite_guvence", label: "Kalite Güvence", color: "#10B981" },
+  { id: "kalite_kontrol", label: "Kalite Kontrol", color: "#A855F7" },
+  { id: "tedarik_kalite", label: "Tedarik Kalite", color: "#EC4899" }
 ];
 
 const KANBAN_STAGES = [
@@ -57,22 +38,65 @@ const INITIAL_USERS = [
   { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", permissions: ["kalite_kontrol", "iyilestirme"] }
 ];
 
+const INITIAL_TASKS = [
+  { id: "tsk-1", module: "asakai", kod: "ASK-2026-001", baslik: "Vardiya A Hatası Giriş Kontrol Tespiti", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-01", vade: "2026-08-28", bitisTarihi: "", durum: "acik", oncelik: "Kritik", subtasks: [{ id: "st-1", text: "Karantinaya alınması", sorumlu: "Ahmet Yılmaz", done: true }] },
+  { id: "tsk-2", module: "iyilestirme", kod: "IYL-2026-001", baslik: "Pres Hattı Fire Oranını Düşürme Kaizen Projesi", sorumlu: "Selin Yıldız", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz", "Selin Yıldız"], acilisTarihi: "2026-08-10", vade: "2026-09-01", bitisTarihi: "", durum: "devam", oncelik: "Yüksek", subtasks: [] },
+  { id: "tsk-3", module: "kalite_guvence", kod: "KGV-2026-001", baslik: "ISO 9001 İç Tetkik Hazırlıkları ve Doküman Revizyonu", sorumlu: "Sistem Yöneticisi (Admin)", gorevTipi: "ekip", ekipUyeleri: ["Ahmet Yılmaz"], acilisTarihi: "2026-08-02", vade: "2026-08-25", bitisTarihi: "", durum: "devam", oncelik: "Kritik", subtasks: [] },
+  { id: "tsk-4", module: "kalite_kontrol", kod: "KKK-2026-001", baslik: "CNC Tezgah Parça Tolerans Ölçüm Doğrulaması", sorumlu: "Selin Yıldız", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-03", vade: "2026-08-15", bitisTarihi: "2026-08-14", durum: "tamam", oncelik: "Yüksek", subtasks: [] },
+  { id: "tsk-5", module: "tedarik_kalite", kod: "TRD-2026-001", baslik: "Sac Tedarikçisi ABC Metal hammadde girdi kontrolü", sorumlu: "Ahmet Yılmaz", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-04", vade: "2026-08-30", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [] }
+];
+
+const INITIAL_TODOS = [
+  { id: "td-1", user: "Sistem Yöneticisi (Admin)", text: "Haftalık KPI Raporlarını İncele", done: false, priority: "Yüksek", subtasks: [{ id: "ts-1", text: "Dashboard verilerini dışa aktar", done: true }], developments: [] }
+];
+
+const INITIAL_CHATS = [
+  { id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, sisteme hoş geldiniz.", time: "08:30" }] }
+];
+
 export default function App() {
-  const [firebaseUser, setFirebaseUser] = useState(null);
-  const [usersList, setUsersList] = useState(INITIAL_USERS);
-  const [tasks, setTasks] = useState([]);
-  const [todos, setTodos] = useState([]);
-  const [chats, setChats] = useState([{ id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Sistem", text: "Bulut ortak sohbet kanalına hoş geldiniz.", time: "08:30" }] }]);
-  const [notifications, setNotifications] = useState([]);
-  
+  const [modulesList, setModulesList] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_modules");
+    return saved ? JSON.parse(saved) : INITIAL_MODULES;
+  });
+
+  const [usersList, setUsersList] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_users");
+    return saved ? JSON.parse(saved) : INITIAL_USERS;
+  });
+
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_tasks");
+    return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : INITIAL_TASKS;
+  });
+
+  const [todos, setTodos] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_todos");
+    return saved ? JSON.parse(saved) : INITIAL_TODOS;
+  });
+
+  const [chats, setChats] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_chats");
+    return saved ? JSON.parse(saved) : INITIAL_CHATS;
+  });
+
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem("dva_v6_notifs");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("dva_v4_current_user");
+    const saved = localStorage.getItem("dva_v6_current_user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("dva_v4_current_user") ? true : false);
+
+  const [isLocked, setIsLocked] = useState(() => {
+    return localStorage.getItem("dva_v6_current_user") ? true : false;
+  });
 
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
+
   const [activeModule, setActiveModule] = useState("dashboard");
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
@@ -81,103 +105,24 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  // Firebase Auth Effect
-  useEffect(() => {
-    if (!isFirebaseActive || !auth) return;
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setFirebaseUser);
-    return () => unsubscribe();
-  }, []);
-
-  // Firestore Realtime Listeners Effect
-  useEffect(() => {
-    if (!isFirebaseActive || !db || !firebaseUser) {
-      // Fallback to localStorage if Firebase not active
-      const savedUsers = localStorage.getItem("dva_v4_users");
-      if (savedUsers) setUsersList(JSON.parse(savedUsers));
-      const savedTasks = localStorage.getItem("dva_v4_tasks");
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
-      return;
-    }
-
-    const usersCol = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-    const tasksCol = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
-    const todosCol = collection(db, 'artifacts', appId, 'users', firebaseUser.uid, 'todos');
-    const chatsCol = collection(db, 'artifacts', appId, 'public', 'data', 'chats');
-    const notifsCol = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
-
-    const unsubUsers = onSnapshot(usersCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setUsersList(list);
-      } else {
-        // Seed initial users if empty
-        INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
-      }
-    }, (err) => console.error("Users error", err));
-
-    const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setTasks(list);
-      } else {
-        // Seed initial tasks if empty
-        // ...
-      }
-    }, (err) => console.error("Tasks error", err));
-
-    const unsubTodos = onSnapshot(todosCol, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTodos(list);
-    }, (err) => console.error("Todos error", err));
-
-    const unsubChats = onSnapshot(chatsCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setChats(list);
-      }
-    }, (err) => console.error("Chats error", err));
-
-    const unsubNotifs = onSnapshot(notifsCol, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setNotifications(list);
-    }, (err) => console.error("Notifs error", err));
-
-    return () => {
-      unsubUsers();
-      unsubTasks();
-      unsubTodos();
-      unsubChats();
-      unsubNotifs();
-    };
-  }, [firebaseUser]);
-
+  useEffect(() => { localStorage.setItem("dva_v6_modules", JSON.stringify(modulesList)); }, [modulesList]);
+  useEffect(() => { localStorage.setItem("dva_v6_users", JSON.stringify(usersList)); }, [usersList]);
+  useEffect(() => { localStorage.setItem("dva_v6_tasks", JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { localStorage.setItem("dva_v6_todos", JSON.stringify(todos)); }, [todos]);
+  useEffect(() => { localStorage.setItem("dva_v6_chats", JSON.stringify(chats)); }, [chats]);
+  useEffect(() => { localStorage.setItem("dva_v6_notifs", JSON.stringify(notifications)); }, [notifications]);
+  
   useEffect(() => {
     if (currentUser && !isLocked) {
-      localStorage.setItem("dva_v4_current_user", JSON.stringify(currentUser));
+      localStorage.setItem("dva_v6_current_user", JSON.stringify(currentUser));
     } else if (!currentUser) {
-      localStorage.removeItem("dva_v4_current_user");
+      localStorage.removeItem("dva_v6_current_user");
     }
   }, [currentUser, isLocked]);
 
-  const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
+  const addNotification = (targetUserName, message, ekipUyeleri = []) => {
     const newNotif = { id: uid(), user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    if (isFirebaseActive && db && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', newNotif.id), newNotif);
-    } else {
-      setNotifications(prev => [newNotif, ...prev]);
-    }
+    setNotifications(prev => [newNotif, ...prev]);
   };
 
   const handleLogin = (username, password) => {
@@ -201,18 +146,14 @@ export default function App() {
     }
   };
 
-  const handleSaveFirstPassword = async (e) => {
+  const handleSaveFirstPassword = (e) => {
     e.preventDefault();
     if (!newPasswordInput.trim() || newPasswordInput.length !== 4 || isNaN(newPasswordInput)) {
       setError("Lütfen tam olarak 4 haneli rakamlardan oluşan bir şifre giriniz.");
       return;
     }
     const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    if (isFirebaseActive && db) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
-    } else {
-      setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    }
+    setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     setCurrentUser(updatedUser);
     setPendingUserForPasswordSetup(null);
     setNewPasswordInput("");
@@ -221,72 +162,46 @@ export default function App() {
     setError(null);
   };
 
-  const handleApproveUser = async (userId) => {
-    const target = usersList.find(u => u.id === userId);
-    if (!target) return;
-    const updated = { ...target, status: "approved" };
-    if (isFirebaseActive && db) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId), updated);
-    } else {
-      setUsersList(prev => prev.map(u => u.id === userId ? updated : u));
-    }
-  };
-
-  const handleUnlock = (password) => {
-    if (currentUser && password === currentUser.password) {
-      setIsLocked(false);
-      setError(null);
-    } else {
-      setError("Şifre hatalı!");
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setIsLocked(false);
-  };
-
-  const handleSaveUser = async (userObj) => {
-    if (isFirebaseActive && db) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
-    } else {
-      setUsersList((prev) => {
-        const exists = prev.find((u) => u.id === userObj.id);
-        const nextList = exists ? prev.map((u) => (u.id === userObj.id ? userObj : u)) : [...prev, userObj];
-        localStorage.setItem("dva_v4_users", JSON.stringify(nextList));
-        return nextList;
-      });
-    }
+  const handleApproveUser = (userId) => { setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u)); };
+  const handleUnlock = (password) => { if (currentUser && password === currentUser.password) { setIsLocked(false); setError(null); } else { setError("Şifre hatalı!"); } };
+  const handleLogout = () => { setCurrentUser(null); setIsLocked(false); };
+  
+  const handleSaveUser = (userObj) => {
+    setUsersList((prev) => {
+      const exists = prev.find((u) => u.id === userObj.id);
+      if (exists) return prev.map((u) => (u.id === userObj.id ? userObj : u));
+      return [...prev, userObj];
+    });
     if (currentUser?.id === userObj.id) setCurrentUser(userObj);
   };
-
-  const handleDeleteUser = async (userId) => {
-    if (isFirebaseActive && db) {
-      // delete doc
-      // Note: deleteDoc available from firebase/firestore
-    }
-    setUsersList((prev) => prev.filter((u) => u.id !== userId));
+  const handleDeleteUser = (userId) => { setUsersList((prev) => prev.filter((u) => u.id !== userId)); };
+  
+  const handleAddModule = (label, color) => {
+    const newId = "mod_" + uid();
+    const newMod = { id: newId, label, color: color || "#38BDF8" };
+    setModulesList(prev => [...prev, newMod]);
+    // Admin yetkisine otomatik ekle
+    setUsersList(prev => prev.map(u => u.role === "admin" ? { ...u, permissions: [...(u.permissions || []), newId] } : u));
   };
 
-  const handleSaveTask = async (taskObj) => {
-    if (isFirebaseActive && db) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
-    } else {
-      setTasks((prev) => {
-        const exists = prev.find((t) => t.id === taskObj.id);
-        const nextList = exists ? prev.map((t) => (t.id === taskObj.id ? taskObj : t)) : [...prev, taskObj];
-        localStorage.setItem("dva_v4_tasks", JSON.stringify(nextList));
-        return nextList;
-      });
+  const handleDeleteModule = (modId) => {
+    if (modulesList.length <= 1) {
+      setError("En az bir ana başlık kalmalıdır!");
+      return;
     }
+    setModulesList(prev => prev.filter(m => m.id !== modId));
+  };
+
+  const handleSaveTask = (taskObj) => {
+    setTasks((prev) => {
+      const exists = prev.find((t) => t.id === taskObj.id);
+      if (exists) return prev.map((t) => (t.id === taskObj.id ? taskObj : t));
+      return [...prev, taskObj];
+    });
     if (selectedTask?.id === taskObj.id) setSelectedTask(taskObj);
   };
-
-  const handleDeleteTask = async (taskId) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    if (selectedTask?.id === taskId) setSelectedTask(null);
-  };
-
+  const handleDeleteTask = (taskId) => { setTasks((prev) => prev.filter((t) => t.id !== taskId)); if (selectedTask?.id === taskId) setSelectedTask(null); };
+  
   const handleMoveStage = (taskId, newStage) => {
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
@@ -304,7 +219,6 @@ export default function App() {
       addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
     }
   };
-
   const handleToggleSubtask = (taskId, subtaskId) => {
     const target = tasks.find((t) => t.id === taskId);
     if (target) {
@@ -314,15 +228,17 @@ export default function App() {
   };
 
   const handleCreateTask = (taskData) => {
-    const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
-    const newTask = {
-      id: uid(), module: taskData.module || "asakai", kod: `${prefix}-2026-${(tasks.length + 1).toString().padStart(3, "0")}`,
-      baslik: taskData.baslik, sorumlu: taskData.sorumlu || currentUser.name, gorevTipi: taskData.gorevTipi || "bireysel",
-      ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [], acilisTarihi: todayStr(),
-      vade: taskData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: taskData.oncelik || "Orta", subtasks: []
-    };
-    handleSaveTask(newTask);
-    addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
+    setTasks((prev) => {
+      const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
+      const newTask = {
+        id: uid(), module: taskData.module || modulesList[0]?.id || "asakai", kod: `${prefix}-2026-${(prev.length + 1).toString().padStart(3, "0")}`,
+        baslik: taskData.baslik, sorumlu: taskData.sorumlu || currentUser.name, gorevTipi: taskData.gorevTipi || "bireysel",
+        ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [], acilisTarihi: todayStr(),
+        vade: taskData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: taskData.oncelik || "Orta", subtasks: []
+      };
+      addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
+      return [...prev, newTask];
+    });
   };
 
   if (pendingUserForPasswordSetup) {
@@ -344,7 +260,7 @@ export default function App() {
     );
   }
 
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} onRegister={handleSaveUser} usersList={usersList} error={error} setError={setError} />;
+  if (!currentUser) return <LoginScreen onLogin={handleLogin} error={error} />;
   if (isLocked) return <LockScreen currentUser={currentUser} onUnlock={handleUnlock} onSwitchUser={handleLogout} error={error} />;
 
   const myNotifications = notifications.filter(n => n.user === currentUser.name || (n.ekipUyeleri && n.ekipUyeleri.includes(currentUser.name)));
@@ -355,15 +271,14 @@ export default function App() {
       <header style={styles.header}>
         <div style={styles.brand}>
           <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Bulut Senkronize Yönetim Paneli</div></div>
+          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
         </div>
         <nav style={styles.navTabs}>
           <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} /><span>Dashboard</span></button>
           <button style={{ ...styles.navTab, ...(activeModule === "todo" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("todo")}><ListTodo size={15} /><span>To-Do List</span></button>
-          {MODULES.map((m) => {
+          {modulesList.map((m) => {
             if (currentUser.role !== "admin" && !(currentUser.permissions || []).includes(m.id)) return null;
-            const Icon = m.icon;
-            return <button key={m.id} style={{ ...styles.navTab, ...(activeModule === m.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(m.id)}><Icon size={15} color={activeModule === m.id ? "#F59E0B" : m.color} /><span>{m.label}</span></button>;
+            return <button key={m.id} style={{ ...styles.navTab, ...(activeModule === m.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(m.id)}><Zap size={15} color={activeModule === m.id ? "#F59E0B" : m.color} /><span>{m.label}</span></button>;
           })}
           <button style={{ ...styles.navTab, ...(activeModule === "ic_yazisma" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("ic_yazisma")}><MessageCircle size={15} color="#38BDF8" /><span>İç Yazışmalar</span></button>
           
@@ -371,13 +286,10 @@ export default function App() {
             <button style={{ ...styles.navTab, ...(activeModule === "detayli_rapor" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("detayli_rapor")}><FileText size={15} color="#38BDF8" /><span>Detaylı Rapor</span></button>
           )}
           {currentUser.role === "admin" && (
-            <button style={{ ...styles.navTab, ...(activeModule === "admin_panel" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin_panel")}><Lock size={15} color="#EF4444" /><span>Yetki & Onay Matrisi</span></button>
+            <button style={{ ...styles.navTab, ...(activeModule === "admin_panel" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin_panel")}><Lock size={15} color="#EF4444" /><span>Yetki & Ana Başlıklar</span></button>
           )}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: isFirebaseActive ? "#10B981" : "#F59E0B", background: "#0F172A", padding: "6px 10px", borderRadius: 8, border: "1px solid #334155" }}>
-            <Globe size={13} /> {isFirebaseActive ? "Bulut Aktif (Canlı)" : "Yerel Mod"}
-          </div>
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
             <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
@@ -394,18 +306,18 @@ export default function App() {
 
       <main style={styles.mainContent}>
         {activeModule === "dashboard" ? (
-          <DashboardView tasks={tasks} usersList={usersList} currentUser={currentUser} onOpenDetail={(t) => setSelectedTask(t)} onNavigateModule={(modId) => setActiveModule(modId)} />
+          <DashboardView tasks={tasks} usersList={usersList} currentUser={currentUser} modulesList={modulesList} onOpenDetail={(t) => setSelectedTask(t)} onNavigateModule={(modId) => setActiveModule(modId)} />
         ) : activeModule === "todo" ? (
           <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
         ) : activeModule === "ic_yazisma" ? (
-          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} db={db} isFirebaseActive={isFirebaseActive} />
+          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} />
         ) : activeModule === "admin_panel" ? (
-          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onApproveUser={handleApproveUser} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
+          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onApproveUser={handleApproveUser} onAddModule={handleAddModule} onDeleteModule={handleDeleteModule} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
         ) : activeModule === "detayli_rapor" ? (
-          (currentUser.role === "admin" || currentUser.role === "moderator") ? <DetailedReportView tasks={tasks} usersList={usersList} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Yok</h2></div>
+          (currentUser.role === "admin" || currentUser.role === "moderator") ? <DetailedReportView tasks={tasks} usersList={usersList} modulesList={modulesList} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Yok</h2></div>
         ) : (
           <KanbanBoardView
-            activeModule={activeModule} tasks={tasks.filter((t) => t.module === activeModule)}
+            activeModule={activeModule} modulesList={modulesList} tasks={tasks.filter((t) => t.module === activeModule)}
             searchQuery={searchQuery} setSearchQuery={setSearchQuery} currentUser={currentUser}
             onOpenDetail={(t) => setSelectedTask(t)} onMoveStage={handleMoveStage}
             onCreateTask={handleCreateTask} onDeleteTask={handleDeleteTask} usersList={usersList}
@@ -417,7 +329,7 @@ export default function App() {
         <TaskDetailModal
           task={selectedTask} currentUser={currentUser} onClose={() => setSelectedTask(null)}
           onAddSubtask={handleAddSubtask} onToggleSubtask={handleToggleSubtask} onMoveStage={handleMoveStage}
-          onDeleteTask={handleDeleteTask} usersList={usersList}
+          onDeleteTask={handleDeleteTask} usersList={usersList} modulesList={modulesList}
         />
       )}
 
@@ -429,7 +341,7 @@ export default function App() {
   );
 }
 
-function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
+function DashboardView({ tasks, currentUser, modulesList, onOpenDetail, onNavigateModule }) {
   const myTasks = tasks.filter(t => t.sorumlu === currentUser.name || (t.ekipUyeleri && t.ekipUyeleri.includes(currentUser.name)));
   
   const userPoints = useMemo(() => {
@@ -464,7 +376,7 @@ function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
       <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", borderRadius: 16, border: `1px solid ${currentRank.color}`, padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Bulut tabanlı senkronize kalite ve performans merkezi.</p>
+          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Kalite ve performans merkezinizdesiniz.</p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
           <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Puan</div><div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div></div>
@@ -497,11 +409,11 @@ function DashboardView({ tasks, currentUser, onOpenDetail, onNavigateModule }) {
   );
 }
 
-function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList }) {
+function KanbanBoardView({ activeModule, modulesList, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList }) {
   const [showNewModal, setShowNewModal] = useState(false);
   const [taskFilter, setTaskFilter] = useState("all");
   
-  const currentModObj = MODULES.find(m => m.id === activeModule) || MODULES[0];
+  const currentModObj = modulesList.find(m => m.id === activeModule) || modulesList[0] || { label: "Pano", color: "#F59E0B" };
   const isAdminOrMod = currentUser.role === "admin" || currentUser.role === "moderator";
 
   const filteredTasks = tasks.filter(t => {
@@ -523,7 +435,7 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: 10, borderRadius: 12 }}><currentModObj.icon size={24} color={currentModObj.color} /></div>
+          <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: 10, borderRadius: 12 }}><Zap size={24} color={currentModObj.color} /></div>
           <div><h1 style={styles.viewTitle}>{currentModObj.label} Panosu</h1><p style={styles.viewSub}>Kanban akış yönetimi ve grup/görev takibi.</p></div>
         </div>
         {isAdminOrMod && <button style={styles.primaryActionBtn} onClick={() => setShowNewModal(true)}><Plus size={16} /> Yeni Görev Ekle</button>}
@@ -563,7 +475,7 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
           );
         })}
       </div>
-      {showNewModal && <CreateTaskModal activeModule={activeModule} usersList={usersList} currentUser={currentUser} onClose={() => setShowNewModal(false)} onCreate={onCreateTask} />}
+      {showNewModal && <CreateTaskModal activeModule={activeModule} modulesList={modulesList} usersList={usersList} currentUser={currentUser} onClose={() => setShowNewModal(false)} onCreate={onCreateTask} />}
     </div>
   );
 }
@@ -571,10 +483,6 @@ function KanbanBoardView({ activeModule, tasks, searchQuery, setSearchQuery, cur
 function TodoListView({ todos, setTodos, currentUser }) {
   const [newTodoText, setNewTodoText] = useState("");
   const [priority, setPriority] = useState("Normal");
-  const [selectedTodoId, setSelectedTodoId] = useState(null);
-  const [newSubtext, setNewSubtext] = useState("");
-  const [newDevText, setNewDevText] = useState("");
-
   const myTodos = todos.filter(t => t.user === currentUser.name);
 
   const handleAddTodo = (e) => {
@@ -615,7 +523,7 @@ function TodoListView({ todos, setTodos, currentUser }) {
   );
 }
 
-function InternalChatView({ chats, setChats, currentUser, usersList, tasks, db, isFirebaseActive }) {
+function InternalChatView({ chats, setChats, currentUser, usersList, tasks }) {
   const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
@@ -623,24 +531,18 @@ function InternalChatView({ chats, setChats, currentUser, usersList, tasks, db, 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chats, activeChatId]);
 
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
-  const handleSend = async (e) => {
+  const handleSend = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
-    const updatedMessages = [...(activeChat.messages || []), msgObj];
-
-    if (isFirebaseActive && db) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), { ...activeChat, messages: updatedMessages });
-    } else {
-      setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, messages: updatedMessages } : c));
-    }
+    setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, messages: [...c.messages, msgObj] } : c));
     setNewMessage("");
   };
 
   return (
     <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar</h1><p style={styles.viewSub}>Bulut tabanlı ortak ekip sohbeti.</p></div></div>
+      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar</h1><p style={styles.viewSub}>Sistem içi genel mesajlaşma modülü.</p></div></div>
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "62vh" }}>
         <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", padding: "4px 8px" }}>KANALLAR</div>
@@ -674,7 +576,7 @@ function InternalChatView({ chats, setChats, currentUser, usersList, tasks, db, 
   );
 }
 
-function DetailedReportView({ tasks, usersList }) {
+function DetailedReportView({ tasks, usersList, modulesList }) {
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Operasyonel Rapor</h1></div><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
@@ -695,17 +597,44 @@ function DetailedReportView({ tasks, usersList }) {
   );
 }
 
-function AdminPermissionsView({ usersList, onSaveUser, onDeleteUser, onApproveUser }) {
+function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser, onApproveUser, onAddModule, onDeleteModule }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [newModLabel, setNewModLabel] = useState("");
+  const [newModColor, setNewModColor] = useState("#38BDF8");
+
   const pendingUsers = usersList.filter(u => u.status === "pending");
   const approvedUsers = usersList.filter(u => u.status === "approved" || !u.status);
 
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Yetki & Üyelik Onay Matrisi</h1></div>
+        <div><h1 style={styles.viewTitle}>Yetki, Üyelik & Ana Başlık Yönetimi</h1></div>
         <button style={styles.primaryActionBtn} onClick={() => { setEditingUser(null); setShowUserModal(true); }}><UserPlus size={16} /> Kullanıcı Ekle</button>
+      </div>
+
+      {/* YENİ ANA BAŞLIK EKLEME BÖLÜMÜ */}
+      <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><FolderPlus size={18} /> Yeni Ana Başlık / Pano Ekle</h3>
+        <form onSubmit={e => {
+          e.preventDefault();
+          if (!newModLabel.trim()) return;
+          onAddModule(newModLabel.trim(), newModColor);
+          setNewModLabel("");
+        }} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <input style={{ ...styles.mainInput, flex: 2 }} placeholder="Başlık adı (Örn: AR-GE Projeleri)..." value={newModLabel} onChange={e => setNewModLabel(e.target.value)} required />
+          <input type="color" style={{ width: 44, height: 40, background: "transparent", border: "none", cursor: "pointer" }} value={newModColor} onChange={e => setNewModColor(e.target.value)} title="Renk Seçin" />
+          <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Başlık Ekle</button>
+        </form>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+          {modulesList.map(m => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#0F172A", padding: "6px 12px", borderRadius: 8, border: `1px solid ${m.color}` }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: m.color }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#F8FAFC" }}>{m.label}</span>
+              {modulesList.length > 1 && <X size={14} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => onDeleteModule(m.id)} title="Başlığı Sil" />}
+            </div>
+          ))}
+        </div>
       </div>
 
       {pendingUsers.length > 0 && (
@@ -723,40 +652,69 @@ function AdminPermissionsView({ usersList, onSaveUser, onDeleteUser, onApproveUs
       )}
 
       <div style={styles.yearEndTableCard}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#F59E0B" }}>Aktif Sistem Kullanıcıları</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#F59E0B" }}>Aktif Sistem Kullanıcıları & Yetkileri</h3>
         <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>İşlem</th></tr></thead>
+          <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>Erişebildiği Başlıklar</th><th style={styles.th}>İşlem</th></tr></thead>
           <tbody>
             {approvedUsers.map(u => (
               <tr key={u.id} style={styles.tr}>
-                <td style={styles.tdTitle}>{u.name}</td><td style={styles.td}>{u.username}</td><td style={styles.td}>{u.role}</td>
-                <td style={styles.td}><button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}>Düzenle</button></td>
+                <td style={styles.tdTitle}>{u.name}</td>
+                <td style={styles.td}>{u.username}</td>
+                <td style={styles.td}>{u.role}</td>
+                <td style={styles.td}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {(u.permissions || []).map(pId => {
+                      const mod = modulesList.find(m => m.id === pId);
+                      return mod ? <span key={pId} style={{ fontSize: 10, background: "rgba(56, 189, 248, 0.15)", color: "#38BDF8", padding: "2px 6px", borderRadius: 4 }}>{mod.label}</span> : null;
+                    })}
+                  </div>
+                </td>
+                <td style={styles.td}><button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}><Edit2 size={13} /> Yetki & Düzenle</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {showUserModal && <UserModal userToEdit={editingUser} onClose={() => setShowUserModal(false)} onSave={onSaveUser} />}
+      {showUserModal && <UserModal userToEdit={editingUser} modulesList={modulesList} onClose={() => setShowUserModal(false)} onSave={onSaveUser} />}
     </div>
   );
 }
 
-function UserModal({ userToEdit, onClose, onSave }) {
+function UserModal({ userToEdit, modulesList, onClose, onSave }) {
   const [name, setName] = useState(userToEdit ? userToEdit.name : "");
   const [username, setUsername] = useState(userToEdit ? userToEdit.username : "");
   const [password, setPassword] = useState(userToEdit ? userToEdit.password : "0000");
   const [role, setRole] = useState(userToEdit ? userToEdit.role : "user");
-  const [permissions, setPermissions] = useState(userToEdit ? userToEdit.permissions || [] : MODULES.map(m=>m.id));
+  const [permissions, setPermissions] = useState(userToEdit ? userToEdit.permissions || [] : modulesList.map(m => m.id));
+
+  const handleTogglePerm = (modId) => {
+    if (permissions.includes(modId)) {
+      setPermissions(permissions.filter(p => p !== modId));
+    } else {
+      setPermissions([...permissions, modId]);
+    }
+  };
 
   return (
     <div style={styles.modalOverlay}>
       <div style={{ ...styles.createModalContent, maxWidth: 500 }}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Kullanıcı Tanımla</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
+        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Kullanıcı ve Yetki Tanımla</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <form onSubmit={e => { e.preventDefault(); onSave({ id: userToEdit ? userToEdit.id : uid(), name, username, password, role, status: "approved", permissions }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Şifre (0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
+          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
           <div><label style={styles.inputLabel}>Rol</label><select style={styles.selectInput} value={role} onChange={e => setRole(e.target.value)}><option value="user">Kullanıcı</option><option value="moderator">Moderatör</option><option value="admin">Admin</option></select></div>
+          <div>
+            <label style={styles.inputLabel}>Erişebileceği Ana Başlıklar / Panolar</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: "#0F172A", padding: 12, borderRadius: 8, border: "1px solid #334155" }}>
+              {modulesList.map(m => (
+                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#F8FAFC", cursor: "pointer" }}>
+                  <input type="checkbox" checked={permissions.includes(m.id)} onChange={() => handleTogglePerm(m.id)} />
+                  <span>{m.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <button type="submit" style={styles.primaryActionBtn}>Kaydet</button>
         </form>
       </div>
@@ -764,7 +722,7 @@ function UserModal({ userToEdit, onClose, onSave }) {
   );
 }
 
-function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCreate }) {
+function CreateTaskModal({ activeModule, modulesList, usersList, currentUser, onClose, onCreate }) {
   const [baslik, setBaslik] = useState("");
   const [sorumlu, setSorumlu] = useState(currentUser?.name || usersList[0]?.name || "");
   const [vade, setVade] = useState(todayStr());
@@ -778,7 +736,7 @@ function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCrea
         <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Yeni Görev</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} placeholder="Görev adı..." /></div>
-          <div><label style={styles.inputLabel}>Modül</label><select style={styles.selectInput} value={module} onChange={e => setModule(e.target.value)}>{MODULES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
+          <div><label style={styles.inputLabel}>Modül / Ana Başlık</label><select style={styles.selectInput} value={module} onChange={e => setModule(e.target.value)}>{modulesList.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
           <div><label style={styles.inputLabel}>Sorumlu</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
           <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
           <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module, gorevTipi, ekipUyeleri }); onClose(); }}>Oluştur</button>
@@ -788,7 +746,7 @@ function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCrea
   );
 }
 
-function TaskDetailModal({ task, currentUser, onClose, onAddSubtask, onToggleSubtask, onMoveStage, onDeleteTask, usersList }) {
+function TaskDetailModal({ task, currentUser, onClose, onAddSubtask, onToggleSubtask, onMoveStage, onDeleteTask, usersList, modulesList }) {
   const [newSubtext, setNewSubtext] = useState("");
   const isAdminOrMod = currentUser.role === "admin" || currentUser.role === "moderator";
 
@@ -849,11 +807,9 @@ function ChangePasswordModal({ currentUser, onClose, onSaveUser }) {
   );
 }
 
-function LoginScreen({ onLogin, onRegister, usersList, error, setError }) {
-  const [isRegistering, setIsRegistering] = useState(false);
+function LoginScreen({ onLogin, error }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
 
   return (
     <div style={styles.loginOverlay}>
@@ -861,27 +817,14 @@ function LoginScreen({ onLogin, onRegister, usersList, error, setError }) {
         <div style={styles.loginHeader}>
           <div style={styles.loginLogo}><ShieldCheck size={36} color="#F59E0B" /></div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: "#F59E0B" }}>Dva Kalite OS</h1>
-          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Bulut Senkronize Yönetim Sistemi</p>
-          <div style={{ marginTop: 8, background: "rgba(245, 158, 11, 0.1)", padding: "6px 10px", borderRadius: 8, fontSize: 11, color: "#F59E0B" }}>🔑 İlk Giriş Şifresi: <b>0000</b></div>
+          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>Süreç ve Kalite Yönetim Sistemi</p>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
-
-        {!isRegistering ? (
-          <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={styles.inputLabel}>Kullanıcı Adı (Örn: admin)</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" required /></div>
-            <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} placeholder="0000" required /></div>
-            <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
-            <div style={{ textAlign: "center", marginTop: 8 }}><button type="button" style={{ background: "transparent", border: "none", color: "#38BDF8", fontSize: 12, cursor: "pointer", fontWeight: 600 }} onClick={() => setIsRegistering(true)}>Kayıt Ol (Admin Onaylı)</button></div>
-          </form>
-        ) : (
-          <form onSubmit={e => { e.preventDefault(); onRegister({ id: uid(), name, username, password: password || "0000", role: "user", status: "pending", permissions: MODULES.map(m=>m.id) }); setIsRegistering(false); alert("Kayıt talebi oluşturuldu!"); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
-            <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-            <div><label style={styles.inputLabel}>Şifre (0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
-            <button type="submit" style={styles.loginSubmitBtn}>Kayıt Talebi Oluştur <Check size={16} /></button>
-            <div style={{ textAlign: "center", marginTop: 8 }}><button type="button" style={{ background: "transparent", border: "none", color: "#94A3B8", fontSize: 12, cursor: "pointer" }} onClick={() => setIsRegistering(false)}>Geri Dön</button></div>
-          </form>
-        )}
+        <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
+          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} placeholder="Kullanıcı adınız..." required autoFocus /></div>
+          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifreniz..." required /></div>
+          <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
+        </form>
       </div>
     </div>
   );
