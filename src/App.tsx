@@ -22,7 +22,8 @@ try {
     projectId: "asistanv2-206bc",
     storageBucket: "asistanv2-206bc.firebasestorage.app",
     messagingSenderId: "78097147227",
-    appId: "1:78097147227:web:ebd844b7834439072ee67e"
+    appId: "1:78097147227:web:7e990ef654e89c5a2ee67e",
+    measurementId: "G-P9J82XEKJP"
   };
 
   if (firebaseConfig && firebaseConfig.apiKey) {
@@ -196,7 +197,7 @@ export default function App() {
       setActiveModule("dashboard");
       setError(null);
     } else {
-      setError("Hataly Kullanıcı Adı veya Şifre!");
+      setError("Hatalı Kullanıcı Adı veya Şifre!");
     }
   };
 
