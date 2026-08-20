@@ -294,24 +294,6 @@ export default function App() {
     }
   };
 
-  const handleAddSubtask = async (taskId, subText, subSorumlu) => {
-    if (!subText.trim()) return;
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const newSub = { id: uid(), text: subText.trim(), sorumlu: subSorumlu || target.sorumlu, done: false };
-      await handleSaveTask({ ...target, subtasks: [...(target.subtasks || []), newSub] });
-      await addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
-    }
-  };
-
-  const handleToggleSubtask = async (taskId, subtaskId) => {
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const newSubs = (target.subtasks || []).map((st) => st.id === subtaskId ? { ...st, done: !st.done } : st );
-      await handleSaveTask({ ...target, subtasks: newSubs });
-    }
-  };
-
   const handleCreateTask = async (taskData) => {
     const newId = uid();
     const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
@@ -405,7 +387,7 @@ export default function App() {
 }
 
 function DashboardView({ tasks, currentUser, onOpenDetail, onNavigate }) {
-  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name);
+  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name || (t.ekipUyeleri && t.ekipUyeleri.includes(currentUser.name)));
   const pts = myTasks.reduce((acc, t) => acc + (t.durum === "tamam" ? 10 : 0), 0);
   return (
     <div style={styles.viewContainer}>
