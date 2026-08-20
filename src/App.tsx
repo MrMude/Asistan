@@ -1,18 +1,16 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  CheckSquare, Square, Plus, Trash2, Download, Upload, Sparkles,
-  Calendar, Users, Target, AlertTriangle, CheckCircle2, Clock,
-  Search, FileSpreadsheet, Layers, Send, Edit3, X, ShieldCheck,
-  ListTodo, RefreshCw, Award, Wifi, WifiOff, Share2, Globe, UserPlus,
-  Lock, Key, LogOut, Shield, ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Zap, Truck,
-  FileUp, HelpCircle, AlertCircle, GripVertical, Edit2, Bell, LayoutDashboard, Check, BarChart3, FileText, Printer, MessageSquare, ExternalLink, MessageCircle, GitCommit, User, Flame, Trophy, FolderPlus
+  CheckSquare, Square, Plus, Trash2, Sparkles,
+  Users, Bell, LayoutDashboard, Check, FileText, Printer,
+  MessageCircle, Lock, Key, LogOut, Shield, ChevronRight,
+  ArrowRight, Zap, Flame, Trophy, FolderPlus, Edit2, Search, AlertCircle
 } from "lucide-react";
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
-let app, auth, db, appId = 'asistan-live-workspace-v2';
+let app, auth, db, appId = 'asistan-live-workspace-v4';
 let isFirebaseActive = false;
 
 try {
@@ -24,7 +22,6 @@ try {
     messagingSenderId: "78097147227",
     appId: "1:78097147227:web:ebd844b7834439072ee67e"
   };
-
   if (firebaseConfig && firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
@@ -32,36 +29,30 @@ try {
     isFirebaseActive = true;
   }
 } catch (e) {
-  console.warn("Firebase bulut bağlantısı kurulamadı, yerel modda çalışılıyor.", e);
+  console.warn("Firebase local fallback mode active.", e);
 }
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" }) : "");
-const getDaysDiff = (target) => {
-  if (!target) return 999;
-  return Math.ceil((new Date(target) - new Date(todayStr())) / (1000 * 60 * 60 * 24));
-};
 
 const INITIAL_MODULES = [
   { id: "asakai", label: "Asakai Toplantısı", color: "#F59E0B" },
-  { id: "iyilestirme", label: "İyileştirme Toplantısı", color: "#38BDF8" },
+  { id: "iyilestirme", label: "İyileştirme", color: "#38BDF8" },
   { id: "kalite_guvence", label: "Kalite Güvence", color: "#10B981" },
-  { id: "kalite_kontrol", label: "Kalite Kontrol", color: "#A855F7" },
-  { id: "tedarik_kalite", label: "Tedarik Kalite", color: "#EC4899" }
+  { id: "kalite_kontrol", label: "Kalite Kontrol", color: "#A855F7" }
 ];
 
 const KANBAN_STAGES = [
-  { id: "acik", label: "Açık / Yeni", color: "#EF4444", bg: "rgba(239, 68, 68, 0.1)" },
-  { id: "devam", label: "Devam Ediyor", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.1)" },
-  { id: "beklemede", label: "Beklemede", color: "#3B82F6", bg: "rgba(59, 130, 246, 0.1)" },
-  { id: "tamam", label: "Tamamlandı", color: "#10B981", bg: "rgba(16, 185, 129, 0.1)" }
+  { id: "acik", label: "Açık / Yeni", color: "#EF4444" },
+  { id: "devam", label: "Devam Ediyor", color: "#F59E0B" },
+  { id: "beklemede", label: "Beklemede", color: "#3B82F6" },
+  { id: "tamam", label: "Tamamlandı", color: "#10B981" }
 ];
 
 const INITIAL_USERS = [
-  { id: "usr-admin", username: "admin", password: "0000", name: "Sistem Yöneticisi (Admin)", role: "admin", status: "approved", permissions: ["asakai", "iyilestirme", "kalite_guvence", "kalite_kontrol", "tedarik_kalite"] },
-  { id: "usr-ahmet", username: "ahmet", password: "0000", name: "Ahmet Yılmaz", role: "moderator", status: "approved", permissions: ["asakai", "kalite_guvence"] },
-  { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", permissions: ["kalite_kontrol", "iyilestirme"] }
+  { id: "usr-admin", username: "admin", password: "0000", name: "Sistem Yöneticisi (Admin)", role: "admin", status: "approved", permissions: ["asakai", "iyilestirme", "kalite_guvence", "kalite_kontrol"] },
+  { id: "usr-ahmet", username: "ahmet", password: "0000", name: "Ahmet Yılmaz", role: "moderator", status: "approved", permissions: ["asakai", "kalite_guvence"] }
 ];
 
 export default function App() {
@@ -74,10 +65,20 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("asistan_current_user");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("asistan_current_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
   });
-  const [isLocked, setIsLocked] = useState(() => localStorage.getItem("asistan_current_user") ? true : false);
+  const [isLocked, setIsLocked] = useState(() => {
+    try {
+      return !!localStorage.getItem("asistan_current_user");
+    } catch (e) {
+      return false;
+    }
+  });
   const [pendingUserForPasswordSetup, setPendingUserForPasswordSetup] = useState(null);
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
@@ -91,15 +92,13 @@ export default function App() {
 
   useEffect(() => {
     if (!isFirebaseActive) {
-      const savedModules = localStorage.getItem("asistan_modules");
-      if (savedModules) setModulesList(JSON.parse(savedModules));
-      const savedUsers = localStorage.getItem("asistan_users");
-      if (savedUsers) setUsersList(JSON.parse(savedUsers));
-      const savedTasks = localStorage.getItem("asistan_tasks");
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      try {
+        setModulesList(JSON.parse(localStorage.getItem("asistan_modules") || JSON.stringify(INITIAL_MODULES)));
+        setUsersList(JSON.parse(localStorage.getItem("asistan_users") || JSON.stringify(INITIAL_USERS)));
+        setTasks(JSON.parse(localStorage.getItem("asistan_tasks") || "[]"));
+      } catch (e) {}
       return;
     }
-
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -107,270 +106,105 @@ export default function App() {
         } else {
           await signInAnonymously(auth);
         }
-      } catch (e) {
-        console.warn("Auth warning:", e);
-      }
+      } catch (e) { console.warn("Auth warning:", e); }
     };
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setFirebaseUser);
-    return () => unsubscribe();
+    return onAuthStateChanged(auth, setFirebaseUser);
   }, []);
 
   useEffect(() => {
     if (!isFirebaseActive || !firebaseUser) return;
-
-    const unsubModules = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'modules'), (snapshot) => {
-      if (!snapshot.empty) {
-        setModulesList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-      } else {
-        INITIAL_MODULES.forEach(m => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', m.id), m));
-      }
-    }, () => {});
-
-    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
-      if (!snapshot.empty) {
-        setUsersList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-      } else {
-        INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
-      }
-    }, () => {});
-
-    const unsubTasks = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snapshot) => {
-      setTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, () => {});
-
-    const unsubTodos = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
-      setTodos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, () => {});
-
-    const unsubChats = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'chats'), (snapshot) => {
-      if (!snapshot.empty) {
-        setChats(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-      } else {
-        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', 'chat-genel'), {
-          id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem Yöneticisi (Admin)", text: "Herkese iyi çalışmalar, ASİSTAN canlı çalışma alanımıza hoş geldiniz.", time: "08:30" }]
-        });
-      }
-    }, () => {});
-
-    const unsubNotifs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), (snapshot) => {
-      setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, () => {});
-
-    return () => {
-      unsubModules(); unsubUsers(); unsubTasks(); unsubTodos(); unsubChats(); unsubNotifs();
-    };
+    const unsubs = [
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'modules'), s => {
+        if (!s.empty) setModulesList(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        else INITIAL_MODULES.forEach(m => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', m.id), m));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), s => {
+        if (!s.empty) setUsersList(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        else INITIAL_USERS.forEach(u => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id), u));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), s => setTasks(s.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), s => setTodos(s.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'chats'), s => {
+        if (!s.empty) setChats(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        else setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', 'chat-genel'), { id: "chat-genel", title: "Genel Ekip Sohbeti", messages: [{ id: "m-1", sender: "Sistem", text: "ASİSTAN canlı çalışma alanına hoş geldiniz.", time: "08:30" }] });
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), s => setNotifications(s.docs.map(d => ({ id: d.id, ...d.data() }))))
+    ];
+    return () => unsubs.forEach(fn => fn());
   }, [firebaseUser]);
 
   useEffect(() => {
     if (!isFirebaseActive) {
-      localStorage.setItem("asistan_modules", JSON.stringify(modulesList));
-      localStorage.setItem("asistan_users", JSON.stringify(usersList));
-      localStorage.setItem("asistan_tasks", JSON.stringify(tasks));
+      try {
+        localStorage.setItem("asistan_modules", JSON.stringify(modulesList));
+        localStorage.setItem("asistan_users", JSON.stringify(usersList));
+        localStorage.setItem("asistan_tasks", JSON.stringify(tasks));
+      } catch (e) {}
     }
-    if (currentUser && !isLocked) {
-      localStorage.setItem("asistan_current_user", JSON.stringify(currentUser));
-    } else if (!currentUser) {
-      localStorage.removeItem("asistan_current_user");
-    }
+    try {
+      if (currentUser && !isLocked) localStorage.setItem("asistan_current_user", JSON.stringify(currentUser));
+      else if (!currentUser) localStorage.removeItem("asistan_current_user");
+    } catch (e) {}
   }, [currentUser, isLocked, modulesList, usersList, tasks]);
 
-  const addNotification = async (targetUserName, message, ekipUyeleri = []) => {
-    const notifId = uid();
-    const newNotif = { id: notifId, user: targetUserName, ekipUyeleri, text: message, date: todayStr(), read: false };
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), newNotif);
-    } else {
-      setNotifications(prev => [newNotif, ...prev]);
-    }
+  const addNotification = async (targetUserName, message) => {
+    const id = uid();
+    const notif = { id, user: targetUserName, text: message, date: todayStr(), read: false };
+    if (isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), notif);
+    else setNotifications(prev => [notif, ...prev]);
   };
 
   const handleLogin = (username, password) => {
-    const found = usersList.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+    const freshUsers = usersList;
+    const found = freshUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     if (found) {
-      if (found.password === "0000") {
-        setPendingUserForPasswordSetup(found);
-        setError(null);
-        return;
-      }
-      setCurrentUser(found);
-      setIsLocked(false);
-      setActiveModule("dashboard");
-      setError(null);
-    } else {
-      setError("Hataly Kullanıcı Adı veya Şifre! (İlk şifre: 0000)");
-    }
+      if (found.password === "0000") { setPendingUserForPasswordSetup(found); setError(null); return; }
+      setCurrentUser(found); setIsLocked(false); setActiveModule("dashboard"); setError(null);
+    } else { setError("Hatalı Kullanıcı Adı veya Şifre!"); }
   };
 
   const handleSaveFirstPassword = async (e) => {
     e.preventDefault();
-    if (!newPasswordInput.trim() || newPasswordInput.length !== 4 || isNaN(newPasswordInput)) {
-      setError("Lütfen tam olarak 4 haneli rakamlardan oluşan bir şifre giriniz.");
-      return;
-    }
-    const updatedUser = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updatedUser.id), updatedUser);
-    } else {
-      setUsersList(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    }
-    setCurrentUser(updatedUser);
-    setPendingUserForPasswordSetup(null);
-    setNewPasswordInput("");
-    setIsLocked(false);
-    setActiveModule("dashboard");
-    setError(null);
-  };
-
-  const handleUnlock = (password) => {
-    if (currentUser && password === currentUser.password) {
-      setIsLocked(false);
-      setError(null);
-    } else {
-      setError("Şifre hatalı!");
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setIsLocked(false);
+    if (!newPasswordInput.trim() || newPasswordInput.length !== 4) { setError("4 haneli şifre giriniz."); return; }
+    const updated = { ...pendingUserForPasswordSetup, password: newPasswordInput.trim() };
+    if (isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', updated.id), updated);
+    else setUsersList(prev => prev.map(u => u.id === updated.id ? updated : u));
+    setCurrentUser(updated); setPendingUserForPasswordSetup(null); setNewPasswordInput(""); setIsLocked(false); setActiveModule("dashboard"); setError(null);
   };
 
   const handleSaveUser = async (userObj) => {
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
-    } else {
-      setUsersList(prev => {
-        const exists = prev.find(u => u.id === userObj.id);
-        if (exists) return prev.map(u => u.id === userObj.id ? userObj : u);
-        return [...prev, userObj];
-      });
-    }
+    if (isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
+    else setUsersList(prev => { const exists = prev.find(u => u.id === userObj.id); return exists ? prev.map(u => u.id === userObj.id ? userObj : u) : [...prev, userObj]; });
     if (currentUser?.id === userObj.id) setCurrentUser(userObj);
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (isFirebaseActive && firebaseUser) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
-    } else {
-      setUsersList(prev => prev.filter(u => u.id !== userId));
-    }
-  };
-
-  const handleAddModule = async (label, color) => {
-    const newId = "mod_" + uid();
-    const newMod = { id: newId, label, color: color || "#38BDF8" };
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', newId), newMod);
-    } else {
-      setModulesList(prev => [...prev, newMod]);
-    }
-    const adminUser = usersList.find(u => u.role === "admin");
-    if (adminUser) {
-      const updatedPerms = [...(adminUser.permissions || []), newId];
-      handleSaveUser({ ...adminUser, permissions: updatedPerms });
-    }
-  };
-
-  const handleDeleteModule = async (modId) => {
-    if (modulesList.length <= 1) {
-      setError("En az bir ana başlık kalmalıdır!");
-      return;
-    }
-    if (isFirebaseActive && firebaseUser) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', modId));
-    } else {
-      setModulesList(prev => prev.filter(m => m.id !== modId));
-    }
+  const handleDeleteUser = async (id) => {
+    if (isFirebaseActive && firebaseUser) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
+    else setUsersList(prev => prev.filter(u => u.id !== id));
   };
 
   const handleSaveTask = async (taskObj) => {
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
-    } else {
-      setTasks(prev => {
-        const exists = prev.find(t => t.id === taskObj.id);
-        if (exists) return prev.map(t => t.id === taskObj.id ? taskObj : t);
-        return [...prev, taskObj];
-      });
-    }
+    if (isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskObj.id), taskObj);
+    else setTasks(prev => { const exists = prev.find(t => t.id === taskObj.id); return exists ? prev.map(t => t.id === taskObj.id ? taskObj : t) : [...prev, taskObj]; });
     if (selectedTask?.id === taskObj.id) setSelectedTask(taskObj);
   };
 
-  const handleDeleteTask = async (taskId) => {
-    if (isFirebaseActive && firebaseUser) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId));
-    } else {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-    }
-    if (selectedTask?.id === taskId) setSelectedTask(null);
-  };
-
-  const handleMoveStage = async (taskId, newStage) => {
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const bitis = newStage === "tamam" ? todayStr() : target.bitisTarihi;
-      await handleSaveTask({ ...target, durum: newStage, bitisTarihi: bitis });
-    }
-  };
-
-  const handleAddSubtask = async (taskId, subText, subSorumlu) => {
-    if (!subText.trim()) return;
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const newSub = { id: uid(), text: subText.trim(), sorumlu: subSorumlu || target.sorumlu, done: false };
-      await handleSaveTask({ ...target, subtasks: [...(target.subtasks || []), newSub] });
-      await addNotification(subSorumlu || target.sorumlu, `Yeni alt adım atandı: ${subText.trim()}`);
-    }
-  };
-
-  const handleToggleSubtask = async (taskId, subtaskId) => {
-    const target = tasks.find((t) => t.id === taskId);
-    if (target) {
-      const newSubs = (target.subtasks || []).map((st) => st.id === subtaskId ? { ...st, done: !st.done } : st );
-      await handleSaveTask({ ...target, subtasks: newSubs });
-    }
-  };
-
-  const handleCreateTask = async (taskData) => {
-    const newId = uid();
-    const prefix = (taskData.module || "ask").substring(0, 3).toUpperCase();
-    const newTask = {
-      id: newId,
-      module: taskData.module || modulesList[0]?.id || "asakai",
-      kod: `${prefix}-2026-${(tasks.length + 1).toString().padStart(3, "0")}`,
-      baslik: taskData.baslik,
-      sorumlu: taskData.sorumlu || currentUser.name,
-      gorevTipi: taskData.gorevTipi || "bireysel",
-      ekipUyeleri: taskData.gorevTipi === "ekip" ? (taskData.ekipUyeleri || []) : [],
-      acilisTarihi: todayStr(),
-      vade: taskData.vade || todayStr(),
-      bitisTarihi: "",
-      durum: "acik",
-      oncelik: taskData.oncelik || "Orta",
-      subtasks: []
-    };
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', newId), newTask);
-    } else {
-      setTasks(prev => [...prev, newTask]);
-    }
-    await addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`, newTask.ekipUyeleri);
+  const handleDeleteTask = async (id) => {
+    if (isFirebaseActive && firebaseUser) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id));
+    else setTasks(prev => prev.filter(t => t.id !== id));
+    if (selectedTask?.id === id) setSelectedTask(null);
   };
 
   if (pendingUserForPasswordSetup) {
     return (
       <div style={styles.loginOverlay}>
         <div style={styles.loginCard}>
-          <div style={styles.loginHeader}>
-            <div style={styles.loginLogo}><Key size={36} color="#F59E0B" /></div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, marginTop: 10, color: "#F59E0B", letterSpacing: "1px" }}>ASİSTAN</h1>
-            <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
-          </div>
+          <div style={styles.loginHeader}><Key size={36} color="#F59E0B" /><h1 style={{ fontSize: 22, fontWeight: 900, marginTop: 10, color: "#F59E0B" }}>ASİSTAN</h1></div>
           {error && <div style={styles.errorBar}>{error}</div>}
           <form onSubmit={handleSaveFirstPassword} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
-            <div><label style={styles.inputLabel}>4 Haneli Yeni Şifre</label><input type="password" maxLength={4} style={styles.mainInput} value={newPasswordInput} onChange={e => setNewPasswordInput(e.target.value)} placeholder="Örn: 1453" required autoFocus /></div>
-            <button type="submit" style={styles.loginSubmitBtn}>Şifreyi Kaydet ve Giriş Yap <ArrowRight size={16} /></button>
+            <div><label style={styles.inputLabel}>4 Haneli Yeni Şifreniz</label><input type="password" maxLength={4} style={styles.mainInput} value={newPasswordInput} onChange={e => setNewPasswordInput(e.target.value)} required autoFocus /></div>
+            <button type="submit" style={styles.loginSubmitBtn}>Kaydet ve Giriş Yap <ArrowRight size={16} /></button>
           </form>
         </div>
       </div>
@@ -378,586 +212,264 @@ export default function App() {
   }
 
   if (!currentUser) return <LoginScreen onLogin={handleLogin} error={error} />;
-  if (isLocked) return <LockScreen currentUser={currentUser} onUnlock={handleUnlock} onSwitchUser={handleLogout} error={error} />;
+  if (isLocked) return <LockScreen currentUser={currentUser} onUnlock={(p) => p === currentUser.password ? setIsLocked(false) : setError("Şifre hatalı!")} onSwitchUser={() => setCurrentUser(null)} error={error} />;
 
-  const myNotifications = notifications.filter(n => n.user === currentUser.name || (n.ekipUyeleri && n.ekipUyeleri.includes(currentUser.name)));
-  const unreadCount = myNotifications.filter(n => !n.read).length;
+  const myNotifs = notifications.filter(n => n.user === currentUser.name);
 
   return (
     <div style={styles.appShell}>
       <header style={styles.header}>
-        <div style={styles.brand}>
-          <div style={styles.logoIcon}><Sparkles size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>ASİSTAN</div><div style={styles.brandSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</div></div>
-        </div>
+        <div style={styles.brand}><Sparkles size={24} color="#F59E0B" /><div><div style={styles.brandName}>ASİSTAN</div><div style={styles.brandSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</div></div></div>
         <nav style={styles.navTabs}>
-          <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} /><span>Dashboard</span></button>
-          <button style={{ ...styles.navTab, ...(activeModule === "todo" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("todo")}><ListTodo size={15} /><span>To-Do List</span></button>
-          {modulesList.map((m) => {
-            if (currentUser.role !== "admin" && !(currentUser.permissions || []).includes(m.id)) return null;
-            return <button key={m.id} style={{ ...styles.navTab, ...(activeModule === m.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(m.id)}><Zap size={15} color={activeModule === m.id ? "#F59E0B" : m.color} /><span>{m.label}</span></button>;
-          })}
-          <button style={{ ...styles.navTab, ...(activeModule === "ic_yazisma" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("ic_yazisma")}><MessageCircle size={15} color="#38BDF8" /><span>İç Yazışmalar</span></button>
-          
-          {(currentUser.role === "admin" || currentUser.role === "moderator") && (
-            <button style={{ ...styles.navTab, ...(activeModule === "detayli_rapor" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("detayli_rapor")}><FileText size={15} color="#38BDF8" /><span>Detaylı Rapor</span></button>
-          )}
-          {currentUser.role === "admin" && (
-            <button style={{ ...styles.navTab, ...(activeModule === "admin_panel" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin_panel")}><Lock size={15} color="#EF4444" /><span>Yetki & Ana Başlıklar</span></button>
-          )}
+          <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("dashboard")}><LayoutDashboard size={15} /><span>Dashboard</span></button>
+          <button style={{ ...styles.navTab, ...(activeModule === "todo" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("todo")}><CheckSquare size={15} /><span>To-Do</span></button>
+          {modulesList.map(m => (currentUser.role === "admin" || (currentUser.permissions || []).includes(m.id)) && (
+            <button key={m.id} style={{ ...styles.navTab, ...(activeModule === m.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(m.id)}><Zap size={15} color={m.color} /><span>{m.label}</span></button>
+          ))}
+          <button style={{ ...styles.navTab, ...(activeModule === "chat" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("chat")}><MessageCircle size={15} /><span>Sohbet</span></button>
+          {(currentUser.role === "admin" || currentUser.role === "moderator") && <button style={{ ...styles.navTab, ...(activeModule === "rapor" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("rapor")}><FileText size={15} /><span>Rapor</span></button>}
+          {currentUser.role === "admin" && <button style={{ ...styles.navTab, ...(activeModule === "admin" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin")}><Lock size={15} /><span>Admin</span></button>}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-          {isFirebaseActive && <span title="Canlı Senkronize Bulut Aktif" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, background: "rgba(16, 185, 129, 0.2)", color: "#10B981", padding: "4px 8px", borderRadius: 8 }}><Wifi size={12} /> Canlı Bulut Aktif</span>}
-          <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
-            <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
-          </button>
+          <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)}><Bell size={18} color="#F59E0B" />{myNotifs.length > 0 && <span style={styles.notificationBadge}>{myNotifs.length}</span>}</button>
           <div style={styles.userProfileBar}>
-            <div style={{ textAlign: "right" }}><div style={styles.userName}>{currentUser.name}</div><div style={styles.userRoleTag}>{currentUser.role === "admin" ? "🔑 Admin" : currentUser.role === "moderator" ? "🛡️ Moderatör" : "👤 Kullanıcı"}</div></div>
+            <div style={{ textAlign: "right" }}><div style={styles.userName}>{currentUser.name}</div><div style={styles.userRoleTag}>{currentUser.role}</div></div>
             <div style={styles.userAvatar}>{currentUser.name.charAt(0)}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: 4 }}>
-                <button style={styles.actionSmallBtn} onClick={() => setShowPasswordModal(true)} title="Şifre Değiştir"><Key size={14} color="#38BDF8" /></button>
-                <button style={styles.actionSmallBtn} onClick={handleLogout} title="Oturumu Kapat"><LogOut size={14} color="#EF4444" /></button>
-            </div>
+            <button style={styles.actionSmallBtn} onClick={() => setShowPasswordModal(true)}><Key size={14} color="#38BDF8" /></button>
+            <button style={styles.actionSmallBtn} onClick={() => { setCurrentUser(null); setIsLocked(false); }}><LogOut size={14} color="#EF4444" /></button>
           </div>
         </div>
       </header>
 
       <main style={styles.mainContent}>
-        {activeModule === "dashboard" ? (
-          <DashboardView tasks={tasks} usersList={usersList} currentUser={currentUser} modulesList={modulesList} onOpenDetail={(t) => setSelectedTask(t)} onNavigateModule={(modId) => setActiveModule(modId)} />
-        ) : activeModule === "todo" ? (
-          <TodoListView currentUser={currentUser} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
-        ) : activeModule === "ic_yazisma" ? (
-          <InternalChatView chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
-        ) : activeModule === "admin_panel" ? (
-          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} onAddModule={handleAddModule} onDeleteModule={handleDeleteModule} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Bulunmamaktadır</h2></div>
-        ) : activeModule === "detayli_rapor" ? (
-          (currentUser.role === "admin" || currentUser.role === "moderator") ? <DetailedReportView tasks={tasks} usersList={usersList} modulesList={modulesList} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Erişim Yetkiniz Yok</h2></div>
-        ) : (
-          <KanbanBoardView
-            activeModule={activeModule} modulesList={modulesList} tasks={tasks.filter((t) => t.module === activeModule)}
-            searchQuery={searchQuery} setSearchQuery={setSearchQuery} currentUser={currentUser}
-            onOpenDetail={(t) => setSelectedTask(t)} onMoveStage={handleMoveStage}
-            onCreateTask={handleCreateTask} onDeleteTask={handleDeleteTask} usersList={usersList}
-          />
-        )}
+        {activeModule === "dashboard" ? <DashboardView tasks={tasks} currentUser={currentUser} onOpenDetail={setSelectedTask} onNavigate={setActiveModule} />
+        : activeModule === "todo" ? <TodoView currentUser={currentUser} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
+        : activeModule === "chat" ? <ChatView chats={chats} setChats={setChats} currentUser={currentUser} db={db} appId={appId} isFirebaseActive={isFirebaseActive} firebaseUser={firebaseUser} />
+        : activeModule === "rapor" ? <ReportView tasks={tasks} />
+        : activeModule === "admin" ? <AdminView usersList={usersList} modulesList={modulesList} onSaveUser={handleSaveUser} onDeleteUser={handleDeleteUser} setModulesList={setModulesList} db={db} appId={appId} isFirebaseActive={isFirebaseActive} />
+        : <KanbanView activeModule={activeModule} modulesList={modulesList} tasks={tasks.filter(t => t.module === activeModule)} currentUser={currentUser} usersList={usersList} searchQuery={searchQuery} setSearchQuery={setSearchQuery} onOpenDetail={setSelectedTask} onMoveStage={async (id, s) => { const t = tasks.find(x => x.id === id); if (t) await handleSaveTask({ ...t, durum: s }); }} onCreateTask={async (d) => {
+            const id = uid();
+            const nt = { id, module: activeModule, kod: `ASK-${Date.now().toString().slice(-4)}`, baslik: d.baslik, sorumlu: d.sorumlu, vade: d.vade, durum: "acik", subtasks: [] };
+            if (isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), nt);
+            else setTasks(p => [...p, nt]);
+          }} onDeleteTask={handleDeleteTask} />}
       </main>
 
-      {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask} currentUser={currentUser} onClose={() => setSelectedTask(null)}
-          onAddSubtask={handleAddSubtask} onToggleSubtask={handleToggleSubtask} onMoveStage={handleMoveStage}
-          onDeleteTask={handleDeleteTask} usersList={usersList} modulesList={modulesList}
-        />
-      )}
-
-      {showPasswordModal && <ChangePasswordModal currentUser={currentUser} onClose={() => setShowPasswordModal(false)} onSaveUser={handleSaveUser} />}
-      {showNotificationsModal && (
-        <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={async () => {
-          for(const n of myNotifications) {
-            if (isFirebaseActive && firebaseUser) {
-              await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', n.id), { ...n, read: true });
-            }
-          }
-        }} />
-      )}
+      {selectedTask && <TaskDetailModal task={selectedTask} currentUser={currentUser} onClose={() => setSelectedTask(null)} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} />}
+      {showPasswordModal && <PasswordModal currentUser={currentUser} onClose={() => setShowPasswordModal(false)} onSaveUser={handleSaveUser} />}
+      {showNotificationsModal && <NotificationsModal notifications={myNotifs} onClose={() => setShowNotificationsModal(false)} />}
     </div>
   );
 }
 
-function DashboardView({ tasks, currentUser, modulesList, onOpenDetail, onNavigateModule }) {
-  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name || (t.ekipUyeleri && t.ekipUyeleri.includes(currentUser.name)));
-  
-  const userPoints = useMemo(() => {
-    let pts = 0;
-    myTasks.forEach(t => {
-      if (t.durum === "tamam") {
-        if (t.bitisTarihi && t.vade && t.bitisTarihi <= t.vade) pts += 10;
-        else pts += 2;
-      } else {
-        if (t.vade && t.vade < todayStr()) pts -= 5;
-      }
-    });
-    return pts;
-  }, [myTasks]);
-
-  const getRank = (pts) => {
-    if (pts < 0) return { label: "Riskli Bölge", color: "#EF4444" };
-    if (pts < 30) return { label: "Çırak", color: "#94A3B8" };
-    if (pts < 80) return { label: "Operatör", color: "#38BDF8" };
-    if (pts < 150) return { label: "Uzman", color: "#10B981" };
-    return { label: "Lider", color: "#F59E0B" };
-  };
-  const currentRank = getRank(userPoints);
-
-  const myCompleted = myTasks.filter(t => t.durum === "tamam").length;
-  const myActive = myTasks.filter(t => t.durum !== "tamam").length;
-  const delayedTasksList = myTasks.filter(t => t.durum !== "tamam" && t.vade && t.vade < todayStr());
-  const approachingTasks = myTasks.filter(t => t.durum !== "tamam" && getDaysDiff(t.vade) >= 0 && getDaysDiff(t.vade) <= 3);
-
+function DashboardView({ tasks, currentUser, onOpenDetail, onNavigate }) {
+  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name);
+  const pts = myTasks.reduce((acc, t) => acc + (t.durum === "tamam" ? 10 : 0), 0);
   return (
     <div style={styles.viewContainer}>
-      <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", borderRadius: 16, border: `1px solid ${currentRank.color}`, padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>ASİSTAN Deneyimi: Hoş Geldin, {currentUser.name} <Flame size={24} color={currentRank.color} /></h1>
-          <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
-        </div>
-        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Puan</div><div style={{ fontSize: 32, fontWeight: 900, color: currentRank.color }}>{userPoints} <span style={{ fontSize: 16 }}>P</span></div></div>
-          <div style={{ width: 1, height: 40, background: "#334155" }}></div>
-          <div><div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Seviye</div><div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.3)", padding: "6px 12px", borderRadius: 10, marginTop: 4 }}><Trophy size={18} color={currentRank.color} /><span style={{ fontSize: 14, fontWeight: 800, color: currentRank.color }}>{currentRank.label}</span></div></div>
-        </div>
+      <div style={{ background: "linear-gradient(135deg, #1E293B, #0F172A)", borderRadius: 16, border: "1px solid #F59E0B", padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div><h1 style={{ fontSize: 24, fontWeight: 900, color: "#F59E0B", display: "flex", gap: 10 }}>Hoş Geldin, {currentUser.name} <Flame size={24} color="#F59E0B" /></h1><p style={{ color: "#94A3B8", fontSize: 13, marginTop: 4 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div>
+        <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: "#94A3B8", fontWeight: 700 }}>PUAN</div><div style={{ fontSize: 32, fontWeight: 900, color: "#F59E0B" }}>{pts} P</div></div>
       </div>
-
       <div style={styles.dashboardCardGrid}>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Üzerimdeki İşler</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B" }}><div style={styles.dashCardTitle}>Aktif Bekleyen</div><div style={styles.dashCardValue}>{myActive}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Tamamlanan</div><div style={styles.dashCardValue}>{myCompleted}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Gecikenler</div><div style={{ fontSize: 24, fontWeight: 800, marginTop: 6, color: "#EF4444" }}>{delayedTasksList.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Toplam İş</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Tamamlanan</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum === "tamam").length}</div></div>
       </div>
-
-      {approachingTasks.length > 0 && (
-        <div style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid #F59E0B", borderRadius: 14, padding: 16 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><AlertCircle size={18} /> Yaklaşan Görevler Radarı</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-            {approachingTasks.map(t => (
-              <div key={t.id} style={{ background: "#1E293B", padding: 12, borderRadius: 10, borderLeft: "3px solid #F59E0B", cursor: "pointer" }} onClick={() => onOpenDetail(t)}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94A3B8", marginBottom: 4 }}><span>{t.kod}</span><span style={{ color: "#F59E0B", fontWeight: 700 }}>{getDaysDiff(t.vade)} Gün Kaldı</span></div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#F8FAFC" }}>{t.baslik}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function KanbanBoardView({ activeModule, modulesList, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList }) {
-  const [showNewModal, setShowNewModal] = useState(false);
-  const [taskFilter, setTaskFilter] = useState("all");
-  
-  const currentModObj = modulesList.find(m => m.id === activeModule) || modulesList[0] || { label: "Pano", color: "#F59E0B" };
-  const isAdminOrMod = currentUser.role === "admin" || currentUser.role === "moderator";
-
-  const filteredTasks = tasks.filter(t => {
-    const matchesSearch = t.baslik.toLowerCase().includes(searchQuery.toLowerCase()) || t.sorumlu.toLowerCase().includes(searchQuery.toLowerCase());
-    if (!matchesSearch) return false;
-    if (taskFilter === "bireysel" && t.gorevTipi !== "bireysel") return false;
-    if (taskFilter === "ekip" && t.gorevTipi !== "ekip") return false;
-    if (taskFilter === "yaklasan") {
-      const diff = getDaysDiff(t.vade);
-      if (t.durum === "tamam" || diff < 0 || diff > 3) return false;
-    }
-    if (taskFilter === "geciken") {
-      if (t.durum === "tamam" || getDaysDiff(t.vade) >= 0) return false;
-    }
-    return true;
-  });
+function KanbanView({ activeModule, modulesList, tasks, currentUser, searchQuery, setSearchQuery, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList }) {
+  const [showModal, setShowModal] = useState(false);
+  const [baslik, setBaslik] = useState(""); const [sorumlu, setSorumlu] = useState(currentUser.name); const [vade, setVade] = useState(todayStr());
+  const modObj = modulesList.find(m => m.id === activeModule) || { label: "Pano" };
 
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: 10, borderRadius: 12 }}><Zap size={24} color={currentModObj.color} /></div>
-          <div><h1 style={styles.viewTitle}>{currentModObj.label} Panosu (ASİSTAN)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div>
-        </div>
-        {isAdminOrMod && <button style={styles.primaryActionBtn} onClick={() => setShowNewModal(true)}><Plus size={16} /> Yeni Görev Ekle</button>}
+        <h1 style={styles.viewTitle}>{modObj.label} Panosu</h1>
+        <button style={styles.primaryActionBtn} onClick={() => setShowModal(true)}><Plus size={16} /> Yeni Görev</button>
       </div>
-
-      <div style={styles.filterToolbar}>
-        <div style={styles.searchWrapper}><Search size={15} color="#F59E0B" /><input style={styles.searchInput} placeholder="Görev veya Sorumlu Ara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
-        <select style={{ ...styles.selectInput, width: "auto" }} value={taskFilter} onChange={(e) => setTaskFilter(e.target.value)}>
-          <option value="all">Tüm Görevler</option><option value="bireysel">👤 Bireysel</option><option value="ekip">👥 Ekip</option><option value="yaklasan">⏳ Yaklaşanlar</option><option value="geciken">🚨 Gecikenler</option>
-        </select>
-      </div>
-
+      <div style={styles.filterToolbar}><div style={styles.searchWrapper}><Search size={15} color="#F59E0B" /><input style={styles.searchInput} placeholder="Ara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
       <div style={styles.kanbanGrid}>
-        {KANBAN_STAGES.map(stage => {
-          const stageTasks = filteredTasks.filter(t => t.durum === stage.id);
-          return (
-            <div key={stage.id} style={styles.kanbanColumn} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const id = e.dataTransfer.getData("text"); if(id) onMoveStage(id, stage.id); }}>
-              <div style={{ ...styles.kanbanColumnHeader, borderTopColor: stage.color }}><span style={{ fontWeight: 800, fontSize: 13, color: stage.color }}>{stage.label}</span><span style={styles.kanbanBadge}>{stageTasks.length}</span></div>
-              <div style={styles.kanbanCardsList}>
-                {stageTasks.map(task => {
-                  const isLate = task.durum !== "tamam" && getDaysDiff(task.vade) < 0;
-                  return (
-                  <div key={task.id} style={{...styles.kanbanCard, border: isLate ? "1px solid #EF4444" : "1px solid #334155"}} draggable onDragStart={e => e.dataTransfer.setData("text", task.id)}>
-                    <div style={styles.cardHeaderRow}>
-                      <span style={styles.taskCodeBadge}>{task.kod}</span>
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        {task.gorevTipi === "ekip" && <span style={{ fontSize: 9, background: "rgba(56, 189, 248, 0.2)", color: "#38BDF8", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>👥 Ekip</span>}
-                        {isLate && <AlertCircle size={14} color="#EF4444" />}
-                      </div>
-                    </div>
-                    <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(task)}>{task.baslik}</div>
-                    <div style={styles.kanbanCardFooter}><span style={{ color: isLate ? "#EF4444" : "#94A3B8" }}>📅 {fmtDate(task.vade)}</span><span>👤 {task.sorumlu}</span></div>
-                  </div>
-                )})}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {showNewModal && <CreateTaskModal activeModule={activeModule} modulesList={modulesList} usersList={usersList} currentUser={currentUser} onClose={() => setShowNewModal(false)} onCreate={onCreateTask} />}
-    </div>
-  );
-}
-
-function TodoListView({ currentUser, db, appId, isFirebaseActive, firebaseUser }) {
-  const [todos, setTodos] = useState([]);
-
-  useEffect(() => {
-    if (!isFirebaseActive) {
-      const saved = localStorage.getItem("asistan_todos");
-      if (saved) setTodos(JSON.parse(saved));
-      return;
-    }
-    const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), (snapshot) => {
-      setTodos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, [isFirebaseActive]);
-
-  useEffect(() => {
-    if (!isFirebaseActive) {
-      localStorage.setItem("asistan_todos", JSON.stringify(todos));
-    }
-  }, [todos, isFirebaseActive]);
-
-  const [newTodoText, setNewTodoText] = useState("");
-  const [priority, setPriority] = useState("Normal");
-  const myTodos = todos.filter(t => t.user === currentUser.name);
-
-  const handleAddTodo = async (e) => {
-    e.preventDefault();
-    if (!newTodoText.trim()) return;
-    const newId = uid();
-    const item = { id: newId, user: currentUser.name, text: newTodoText.trim(), done: false, priority, subtasks: [], developments: [] };
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', newId), item);
-    } else {
-      setTodos(prev => [item, ...prev]);
-    }
-    setNewTodoText("");
-  };
-
-  const handleToggle = async (id) => {
-    const t = todos.find(item => item.id === id);
-    if(t) {
-      const updated = { ...t, done: !t.done };
-      if (isFirebaseActive && firebaseUser) {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id), updated);
-      } else {
-        setTodos(prev => prev.map(item => item.id === id ? updated : item));
-      }
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (isFirebaseActive && firebaseUser) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id));
-    } else {
-      setTodos(prev => prev.filter(item => item.id !== id));
-    }
-  };
-
-  return (
-    <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (ASİSTAN To-Do)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div></div>
-      <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-        <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10 }}>
-          <input style={{ ...styles.mainInput, flex: 3 }} placeholder="Yeni yapılacak iş veya not..." value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} />
-          <select style={{ ...styles.selectInput, flex: 1 }} value={priority} onChange={(e) => setPriority(e.target.value)}><option value="Normal">Normal</option><option value="Yüksek">Yüksek</option><option value="Kritik">Kritik</option></select>
-          <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Ekle</button>
-        </form>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-          {myTodos.map(t => (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0F172A", padding: "12px 16px", borderRadius: 10, border: "1px solid #334155" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => handleToggle(t.id)}>
-                {t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}
-                <span style={{ textDecoration: t.done ? "line-through" : "none", color: t.done ? "#64748B" : "#F8FAFC", fontSize: 13, fontWeight: 600 }}>{t.text}</span>
-              </div>
-              <button style={styles.deleteIconBtn} onClick={() => handleDelete(t.id)}><Trash2 size={14} /></button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InternalChatView({ chats, setChats, currentUser, usersList, db, appId, isFirebaseActive, firebaseUser }) {
-  const [activeChatId, setActiveChatId] = useState(chats[0]?.id || "chat-genel");
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chats, activeChatId]);
-
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const msgObj = { id: uid(), sender: currentUser.name, text: newMessage.trim(), time: timeStr };
-    const updatedMessages = [...(activeChat.messages || []), msgObj];
-    const updatedChat = { ...activeChat, messages: updatedMessages };
-    
-    if (isFirebaseActive && firebaseUser) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), updatedChat);
-    } else {
-      setChats(prev => prev.map(c => c.id === activeChat.id ? updatedChat : c));
-    }
-    setNewMessage("");
-  };
-
-  return (
-    <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>İç Yazışmalar (ASİSTAN Sohbet)</h1><p style={styles.viewSub}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div></div>
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "62vh" }}>
-        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", padding: "4px 8px" }}>KANALLAR</div>
-          {chats.map(c => (
-            <div key={c.id} style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: c.id === activeChatId ? "rgba(245, 158, 11, 0.15)" : "#0F172A", border: c.id === activeChatId ? "1px solid #F59E0B" : "1px solid #334155" }} onClick={() => setActiveChatId(c.id)}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: c.id === activeChatId ? "#F59E0B" : "#F8FAFC" }}>{c.title}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column" }}>
-          <div style={{ borderBottom: "1px solid #334155", paddingBottom: 10, marginBottom: 12 }}><h3 style={{ fontSize: 15, fontWeight: 800, color: "#F59E0B" }}>{activeChat?.title}</h3></div>
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 8 }}>
-            {activeChat?.messages?.map(msg => {
-              const isMe = msg.sender === currentUser.name;
-              return (
-                <div key={msg.id} style={{ alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "70%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-                  <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 2 }}>{msg.sender} • {msg.time}</div>
-                  <div style={{ background: isMe ? "#F59E0B" : "#0F172A", color: isMe ? "#0F172A" : "#F8FAFC", padding: "10px 14px", borderRadius: 10, border: "1px solid #334155", fontSize: 13, fontWeight: isMe ? 700 : 400 }}>{msg.text}</div>
+        {KANBAN_STAGES.map(s => (
+          <div key={s.id} style={styles.kanbanColumn} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const id = e.dataTransfer.getData("text"); if(id) onMoveStage(id, s.id); }}>
+            <div style={{ ...styles.kanbanColumnHeader, borderTopColor: s.color }}><span style={{ fontWeight: 800, color: s.color }}>{s.label}</span><span style={styles.kanbanBadge}>{tasks.filter(t => t.durum === s.id).length}</span></div>
+            <div style={styles.kanbanCardsList}>
+              {tasks.filter(t => t.durum === s.id).map(t => (
+                <div key={t.id} style={styles.kanbanCard} draggable onDragStart={e => e.dataTransfer.setData("text", t.id)}>
+                  <div style={styles.cardHeaderRow}><span style={styles.taskCodeBadge}>{t.kod}</span><button style={styles.deleteIconBtn} onClick={() => onDeleteTask(t.id)}><Trash2 size={12} /></button></div>
+                  <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(t)}>{t.baslik}</div>
+                  <div style={styles.kanbanCardFooter}><span>{t.sorumlu}</span><span>{fmtDate(t.vade)}</span></div>
                 </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={handleSend} style={{ display: "flex", gap: 10, marginTop: 14, borderTop: "1px solid #334155", paddingTop: 14 }}>
-            <input style={styles.mainInput} placeholder="Mesaj yazın..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-            <button type="submit" style={styles.primaryActionBtn}><Send size={16} /> Gönder</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailedReportView({ tasks, usersList, modulesList }) {
-  return (
-    <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}><div><h1 style={styles.viewTitle}>Operasyonel Rapor (ASİSTAN)</h1></div><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
-      <div style={styles.yearEndTableCard}>
-        <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Durum</th></tr></thead>
-          <tbody>
-            {tasks.map(t => (
-              <tr key={t.id} style={styles.tr}>
-                <td style={styles.td}><span style={styles.taskCodeBadge}>{t.kod}</span></td><td style={styles.tdTitle}>{t.baslik}</td>
-                <td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.durum}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function AdminPermissionsView({ usersList, modulesList, onSaveUser, onDeleteUser, onAddModule, onDeleteModule }) {
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [newModLabel, setNewModLabel] = useState("");
-  const [newModColor, setNewModColor] = useState("#38BDF8");
-
-  return (
-    <div style={styles.viewContainer}>
-      <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Yetki, Üyelik & Ana Başlık Yönetimi (ASİSTAN)</h1></div>
-        <button style={styles.primaryActionBtn} onClick={() => { setEditingUser(null); setShowUserModal(true); }}><UserPlus size={16} /> Kullanıcı Ekle</button>
-      </div>
-
-      <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><FolderPlus size={18} /> Yeni Ana Başlık / Pano Ekle</h3>
-        <form onSubmit={e => {
-          e.preventDefault();
-          if (!newModLabel.trim()) return;
-          onAddModule(newModLabel.trim(), newModColor);
-          setNewModLabel("");
-        }} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <input style={{ ...styles.mainInput, flex: 2 }} placeholder="Başlık adı (Örn: Projeler)..." value={newModLabel} onChange={e => setNewModLabel(e.target.value)} required />
-          <input type="color" style={{ width: 44, height: 40, background: "transparent", border: "none", cursor: "pointer" }} value={newModColor} onChange={e => setNewModColor(e.target.value)} title="Renk Seçin" />
-          <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Başlık Ekle</button>
-        </form>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-          {modulesList.map(m => (
-            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#0F172A", padding: "6px 12px", borderRadius: 8, border: `1px solid ${m.color}` }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: m.color }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#F8FAFC" }}>{m.label}</span>
-              {modulesList.length > 1 && <X size={14} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => onDeleteModule(m.id)} title="Başlığı Sil" />}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.yearEndTableCard}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: "#F59E0B" }}>Aktif Sistem Kullanıcıları & Yetkileri</h3>
-        <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Adı Soyadı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>Erişebildiği Başlıklar</th><th style={styles.th}>İşlem</th></tr></thead>
-          <tbody>
-            {usersList.map(u => (
-              <tr key={u.id} style={styles.tr}>
-                <td style={styles.tdTitle}>{u.name}</td>
-                <td style={styles.td}>{u.username}</td>
-                <td style={styles.td}>{u.role}</td>
-                <td style={styles.td}>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {(u.permissions || []).map(pId => {
-                      const mod = modulesList.find(m => m.id === pId);
-                      return mod ? <span key={pId} style={{ fontSize: 10, background: "rgba(56, 189, 248, 0.15)", color: "#38BDF8", padding: "2px 6px", borderRadius: 4 }}>{mod.label}</span> : null;
-                    })}
-                  </div>
-                </td>
-                <td style={styles.td}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={styles.editIconBtn} onClick={() => { setEditingUser(u); setShowUserModal(true); }}><Edit2 size={13} /> Düzenle</button>
-                    {u.username !== "admin" && <button style={styles.deleteDangerBtn} onClick={() => onDeleteUser(u.id)}>Sil</button>}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {showUserModal && <UserModal userToEdit={editingUser} modulesList={modulesList} onClose={() => setShowUserModal(false)} onSave={onSaveUser} />}
-    </div>
-  );
-}
-
-function UserModal({ userToEdit, modulesList, onClose, onSave }) {
-  const [name, setName] = useState(userToEdit ? userToEdit.name : "");
-  const [username, setUsername] = useState(userToEdit ? userToEdit.username : "");
-  const [password, setPassword] = useState(userToEdit ? userToEdit.password : "0000");
-  const [role, setRole] = useState(userToEdit ? userToEdit.role : "user");
-  const [permissions, setPermissions] = useState(userToEdit ? userToEdit.permissions || [] : modulesList.map(m => m.id));
-
-  const handleTogglePerm = (modId) => {
-    if (permissions.includes(modId)) {
-      setPermissions(permissions.filter(p => p !== modId));
-    } else {
-      setPermissions([...permissions, modId]);
-    }
-  };
-
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={{ ...styles.createModalContent, maxWidth: 500 }}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Kullanıcı ve Yetki Tanımla</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
-        <form onSubmit={e => { e.preventDefault(); onSave({ id: userToEdit ? userToEdit.id : uid(), name, username, password, role, status: "approved", permissions }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-          <div><label style={styles.inputLabel}>Adı Soyadı</label><input style={styles.mainInput} value={name} onChange={e => setName(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Kullanıcı ID</label><input style={styles.mainInput} value={username} onChange={e => setUsername(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Şifre (Varsayılan 0000)</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Rol</label><select style={styles.selectInput} value={role} onChange={e => setRole(e.target.value)}><option value="user">Kullanıcı</option><option value="moderator">Moderatör</option><option value="admin">Admin</option></select></div>
-          <div>
-            <label style={styles.inputLabel}>Erişebileceği Ana Başlıklar / Panolar</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: "#0F172A", padding: 12, borderRadius: 8, border: "1px solid #334155" }}>
-              {modulesList.map(m => (
-                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#F8FAFC", cursor: "pointer" }}>
-                  <input type="checkbox" checked={permissions.includes(m.id)} onChange={() => handleTogglePerm(m.id)} />
-                  <span>{m.label}</span>
-                </label>
               ))}
             </div>
           </div>
-          <button type="submit" style={styles.primaryActionBtn}>Kaydet</button>
-        </form>
+        ))}
       </div>
-    </div>
-  );
-}
-
-function CreateTaskModal({ activeModule, modulesList, usersList, currentUser, onClose, onCreate }) {
-  const [baslik, setBaslik] = useState("");
-  const [sorumlu, setSorumlu] = useState(currentUser?.name || usersList[0]?.name || "");
-  const [vade, setVade] = useState(todayStr());
-  const [module, setModule] = useState(activeModule);
-  const [gorevTipi, setGorevTipi] = useState("bireysel");
-  const [ekipUyeleri, setEkipUyeleri] = useState([]);
-
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={{ ...styles.createModalContent, maxWidth: 520 }}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Yeni Görev</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-          <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} placeholder="Görev adı..." /></div>
-          <div><label style={styles.inputLabel}>Modül / Ana Başlık</label><select style={styles.selectInput} value={module} onChange={e => setModule(e.target.value)}>{modulesList.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></div>
-          <div><label style={styles.inputLabel}>Sorumlu</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
-          <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
-          <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module, gorevTipi, ekipUyeleri }); onClose(); }}>Oluştur</button>
+      {showModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.createModalContent}>
+            <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Görev Ekle</h2><button style={styles.closeBtn} onClick={() => setShowModal(false)}>✕</button></div>
+            <form onSubmit={e => { e.preventDefault(); onCreateTask({ baslik, sorumlu, vade }); setShowModal(false); setBaslik(""); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+              <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} required /></div>
+              <div><label style={styles.inputLabel}>Sorumlu</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
+              <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
+              <button type="submit" style={styles.primaryActionBtn}>Oluştur</button>
+            </form>
+          </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TodoView({ currentUser, db, appId, isFirebaseActive, firebaseUser }) {
+  const [todos, setTodos] = useState([]);
+  const [text, setText] = useState("");
+  useEffect(() => {
+    if (!isFirebaseActive) {
+      try { setTodos(JSON.parse(localStorage.getItem("asistan_todos") || "[]")); } catch (e) {}
+      return;
+    }
+    return onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'todos'), s => setTodos(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, [isFirebaseActive]);
+  const add = async (e) => {
+    e.preventDefault(); if(!text.trim()) return;
+    const id = uid(); const item = { id, user: currentUser.name, text: text.trim(), done: false };
+    if(isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', id), item);
+    else setTodos(p => [item, ...p]);
+    setText("");
+  };
+  return (
+    <div style={styles.viewContainer}>
+      <h1 style={styles.viewTitle}>Kişisel To-Do List</h1>
+      <form onSubmit={add} style={{ display: "flex", gap: 10 }}><input style={{ ...styles.mainInput, flex: 3 }} placeholder="Not..." value={text} onChange={e => setText(e.target.value)} /><button type="submit" style={styles.primaryActionBtn}>Ekle</button></form>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {todos.filter(t => t.user === currentUser.name).map(t => (
+          <div key={t.id} style={{ background: "#0F172A", padding: 12, borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+            <span>{t.text}</span>
+            <button style={styles.deleteIconBtn} onClick={async () => {
+              if(isFirebaseActive && firebaseUser) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'todos', t.id));
+              else setTodos(p => p.filter(x => x.id !== t.id));
+            }}><Trash2 size={14} /></button>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function TaskDetailModal({ task, currentUser, onClose, onAddSubtask, onToggleSubtask, onMoveStage, onDeleteTask, usersList, modulesList }) {
-  const [newSubtext, setNewSubtext] = useState("");
-  const isAdminOrMod = currentUser.role === "admin" || currentUser.role === "moderator";
+function ChatView({ chats, setChats, currentUser, db, appId, isFirebaseActive, firebaseUser }) {
+  const [msg, setMsg] = useState("");
+  const activeChat = chats[0] || { id: "chat-genel", title: "Genel", messages: [] };
+  const send = async (e) => {
+    e.preventDefault(); if(!msg.trim()) return;
+    const m = { id: uid(), sender: currentUser.name, text: msg.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    const updated = { ...activeChat, messages: [...(activeChat.messages || []), m] };
+    if(isFirebaseActive && firebaseUser) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChat.id), updated);
+    else setChats(p => p.map(c => c.id === activeChat.id ? updated : c));
+    setMsg("");
+  };
+  return (
+    <div style={styles.viewContainer}>
+      <h1 style={styles.viewTitle}>Ekip Sohbeti</h1>
+      <div style={{ background: "#1E293B", borderRadius: 14, padding: 20, height: "60vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+          {activeChat.messages?.map(m => (
+            <div key={m.id} style={{ alignSelf: m.sender === currentUser.name ? "flex-end" : "flex-start", background: m.sender === currentUser.name ? "#F59E0B" : "#0F172A", color: m.sender === currentUser.name ? "#0F172A" : "#F8FAFC", padding: 10, borderRadius: 8, maxWidth: "70%" }}>
+              <div style={{ fontSize: 10, opacity: 0.8 }}>{m.sender}</div><div>{m.text}</div>
+            </div>
+          ))}
+        </div>
+        <form onSubmit={send} style={{ display: "flex", gap: 10, marginTop: 10 }}><input style={styles.mainInput} placeholder="Mesaj..." value={msg} onChange={e => setMsg(e.target.value)} /><button type="submit" style={styles.primaryActionBtn}>Gönder</button></form>
+      </div>
+    </div>
+  );
+}
 
+function ReportView({ tasks }) {
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}><h1 style={styles.viewTitle}>Rapor</h1><button style={styles.printBtn} onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
+      <div style={styles.yearEndTableCard}>
+        <table style={styles.table}>
+          <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Durum</th></tr></thead>
+          <tbody>{tasks.map(t => (<tr key={t.id} style={styles.tr}><td style={styles.td}>{t.kod}</td><td style={styles.td}>{t.baslik}</td><td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.durum}</td></tr>))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AdminView({ usersList, modulesList, onSaveUser, onDeleteUser, setModulesList, db, appId, isFirebaseActive }) {
+  const [label, setLabel] = useState(""); const [color, setColor] = useState("#38BDF8");
+  return (
+    <div style={styles.viewContainer}>
+      <h1 style={styles.viewTitle}>Admin Paneli & Başlıklar</h1>
+      <div style={{ background: "#1E293B", padding: 20, borderRadius: 14 }}>
+        <h3 style={{ color: "#F59E0B", marginBottom: 10 }}>Yeni Pano Ekle</h3>
+        <form onSubmit={async e => {
+          e.preventDefault(); if(!label.trim()) return;
+          const id = "mod_" + uid(); const m = { id, label: label.trim(), color };
+          if(isFirebaseActive) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'modules', id), m);
+          else setModulesList(p => [...p, m]);
+          setLabel("");
+        }} style={{ display: "flex", gap: 10 }}><input style={{ ...styles.mainInput, flex: 2 }} placeholder="Pano adı..." value={label} onChange={e => setLabel(e.target.value)} /><input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 40 }} /><button type="submit" style={styles.primaryActionBtn}>Ekle</button></form>
+      </div>
+      <div style={styles.yearEndTableCard}>
+        <table style={styles.table}>
+          <thead><tr><th style={styles.th}>İsim</th><th style={styles.th}>Rol</th><th style={styles.th}>İşlem</th></tr></thead>
+          <tbody>{usersList.map(u => (<tr key={u.id} style={styles.tr}><td style={styles.td}>{u.name}</td><td style={styles.td}>{u.role}</td><td style={styles.td}><button style={styles.deleteDangerBtn} onClick={() => onDeleteUser(u.id)}>Sil</button></td></tr>))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TaskDetailModal({ task, currentUser, onClose, onSaveTask, onDeleteTask }) {
+  const [sub, setSub] = useState("");
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.drawerContainer}>
-        <div style={styles.drawerHeader}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
+        <div style={styles.drawerHeader}><span>{task.kod}</span><button style={styles.closeBtn} onClick={onClose}>✕</button></div>
         <div style={styles.drawerBody}>
-          <h2 style={{ fontSize: 18, fontWeight: 800 }}>{task.baslik}</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "#0F172A", padding: 12, borderRadius: 10 }}>
-            <div><label style={styles.inputLabel}>Sorumlu</label><div>{task.sorumlu}</div></div>
-            <div><label style={styles.inputLabel}>Aşama</label><select style={styles.selectInput} value={task.durum} onChange={e => onMoveStage(task.id, e.target.value)}>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-          </div>
-          <div style={styles.subtaskSection}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#F59E0B" }}>Alt Adımlar</div>
-            {(task.subtasks || []).map(st => (
-              <div key={st.id} style={styles.subtaskRowInteractive} onClick={() => onToggleSubtask(task.id, st.id)}>
-                {st.done ? <CheckSquare size={16} color="#10B981" /> : <Square size={16} color="#6B7280" />}<span style={{ textDecoration: st.done ? "line-through" : "none", flex: 1 }}>{st.text}</span>
-              </div>
-            ))}
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}><input style={styles.mainInput} placeholder="Alt adım..." value={newSubtext} onChange={e => setNewSubtext(e.target.value)} /><button style={styles.addInlineBtn} onClick={() => { onAddSubtask(task.id, newSubtext, task.sorumlu); setNewSubtext(""); }}>Ekle</button></div>
-          </div>
+          <h2>{task.baslik}</h2>
+          <div>Sorumlu: {task.sorumlu}</div>
+          <div>Alt Adımlar:</div>
+          {(task.subtasks || []).map((st, i) => <div key={i}>- {st.text}</div>)}
+          <div style={{ display: "flex", gap: 6 }}><input style={styles.mainInput} placeholder="Alt adım..." value={sub} onChange={e => setSub(e.target.value)} /><button style={styles.addInlineBtn} onClick={async () => {
+            if(!sub.trim()) return;
+            const updated = { ...task, subtasks: [...(task.subtasks || []), { id: uid(), text: sub, done: false }] };
+            await onSaveTask(updated); setSub("");
+          }}>Ekle</button></div>
         </div>
-        <div style={styles.drawerFooter}>{isAdminOrMod ? <button style={styles.deleteDangerBtn} onClick={() => onDeleteTask(task.id)}>Sil</button> : <div />}<button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
+        <div style={styles.drawerFooter}><button style={styles.deleteDangerBtn} onClick={() => onDeleteTask(task.id)}>Sil</button><button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
       </div>
     </div>
   );
 }
 
-function NotificationsModal({ notifications, onClose, onMarkAllRead }) {
+function NotificationsModal({ notifications, onClose }) {
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.createModalContent}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Bildirimler</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10, maxHeight: 350, overflowY: "auto" }}>
-          {notifications.map(n => (<div key={n.id} style={{ background: "#0F172A", padding: 12, borderRadius: 8 }}><div style={{ fontSize: 12 }}>{n.text}</div></div>))}
-        </div>
-        <div style={styles.drawerFooter}><button style={styles.ghostBtn} onClick={onMarkAllRead}>Okundu İşaretle</button><button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
+        <div style={styles.drawerHeader}><h2>Bildirimler</h2><button style={styles.closeBtn} onClick={onClose}>✕</button></div>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>{notifications.map(n => <div key={n.id} style={{ background: "#0F172A", padding: 10, borderRadius: 6, fontSize: 12 }}>{n.text}</div>)}</div>
       </div>
     </div>
   );
 }
 
-function ChangePasswordModal({ currentUser, onClose, onSaveUser }) {
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+function PasswordModal({ currentUser, onClose, onSaveUser }) {
+  const [oldP, setOldP] = useState(""); const [newP, setNewP] = useState("");
   return (
     <div style={styles.modalOverlay}>
-      <div style={{...styles.createModalContent, maxWidth: 400}}>
-        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Şifre Değiştir</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
-        <form onSubmit={(e) => { e.preventDefault(); if(oldPassword !== currentUser.password) { alert("Eski şifre yanlış!"); return; } onSaveUser({...currentUser, password: newPassword}); alert("Şifre güncellendi"); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
-          <div><label style={styles.inputLabel}>Eski Şifre</label><input type="password" style={styles.mainInput} value={oldPassword} onChange={e => setOldPassword(e.target.value)} required /></div>
-          <div><label style={styles.inputLabel}>Yeni Şifre</label><input type="password" style={styles.mainInput} value={newPassword} onChange={e => setNewPassword(e.target.value)} required /></div>
+      <div style={styles.createModalContent}>
+        <div style={styles.drawerHeader}><h2>Şifre Değiştir</h2><button style={styles.closeBtn} onClick={onClose}>✕</button></div>
+        <form onSubmit={e => { e.preventDefault(); if(oldP !== currentUser.password) { alert("Eski şifre yanlış"); return; } onSaveUser({ ...currentUser, password: newP }); alert("Güncellendi"); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+          <div><label style={styles.inputLabel}>Eski Şifre</label><input type="password" style={styles.mainInput} value={oldP} onChange={e => setOldP(e.target.value)} required /></div>
+          <div><label style={styles.inputLabel}>Yeni Şifre</label><input type="password" style={styles.mainInput} value={newP} onChange={e => setNewP(e.target.value)} required /></div>
           <button type="submit" style={styles.primaryActionBtn}>Kaydet</button>
         </form>
       </div>
@@ -966,21 +478,15 @@ function ChangePasswordModal({ currentUser, onClose, onSaveUser }) {
 }
 
 function LoginScreen({ onLogin, error }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
+  const [u, setU] = useState(""); const [p, setP] = useState("");
   return (
     <div style={styles.loginOverlay}>
       <div style={styles.loginCard}>
-        <div style={styles.loginHeader}>
-          <div style={styles.loginLogo}><Sparkles size={40} color="#F59E0B" /></div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, marginTop: 12, color: "#F59E0B", letterSpacing: "2px", fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: "0 2px 10px rgba(245, 158, 11, 0.3)" }}>ASİSTAN</h1>
-          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, fontWeight: 600 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
-        </div>
+        <div style={styles.loginHeader}><Sparkles size={40} color="#F59E0B" /><h1 style={{ fontSize: 32, fontWeight: 900, marginTop: 12, color: "#F59E0B" }}>ASİSTAN</h1><p style={{ fontSize: 12, color: "#94A3B8" }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p></div>
         {error && <div style={styles.errorBar}>{error}</div>}
-        <form onSubmit={e => { e.preventDefault(); onLogin(username, password); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
-          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={username} onChange={e => setSearchQuery ? null : setUsername(e.target.value)} onInput={e => setUsername(e.target.value)} placeholder="Kullanıcı adınız..." required autoFocus /></div>
-          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={password} onInput={e => setPassword(e.target.value)} placeholder="Şifreniz..." required /></div>
+        <form onSubmit={e => { e.preventDefault(); onLogin(u, p); }} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
+          <div><label style={styles.inputLabel}>Kullanıcı Adı</label><input style={styles.mainInput} value={u} onChange={e => setU(e.target.value)} required autoFocus /></div>
+          <div><label style={styles.inputLabel}>Şifre</label><input type="password" style={styles.mainInput} value={p} onChange={e => setP(e.target.value)} required /></div>
           <button type="submit" style={styles.loginSubmitBtn}>Giriş Yap <ArrowRight size={16} /></button>
         </form>
       </div>
@@ -989,20 +495,16 @@ function LoginScreen({ onLogin, error }) {
 }
 
 function LockScreen({ currentUser, onUnlock, onSwitchUser, error }) {
-  const [password, setPassword] = useState("");
+  const [p, setP] = useState("");
   return (
     <div style={styles.loginOverlay}>
       <div style={styles.loginCard}>
-        <div style={styles.loginHeader}>
-          <div style={styles.loginLogo}><Lock size={36} color="#F59E0B" /></div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, marginTop: 10, color: "#F59E0B", letterSpacing: "1px" }}>ASİSTAN</h1>
-          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>Görevler tamamlanır, puanlar toplanır, başarı kutlanır.</p>
-        </div>
+        <div style={styles.loginHeader}><Lock size={36} color="#F59E0B" /><h1 style={{ fontSize: 24, fontWeight: 900, marginTop: 10, color: "#F59E0B" }}>ASİSTAN</h1></div>
         {error && <div style={styles.errorBar}>{error}</div>}
-        <form onSubmit={e => { e.preventDefault(); onUnlock(password); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div><label style={styles.inputLabel}>Şifreniz</label><input type="password" style={styles.mainInput} value={password} onChange={e => setPassword(e.target.value)} required autoFocus /></div>
+        <form onSubmit={e => { e.preventDefault(); onUnlock(p); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div><label style={styles.inputLabel}>Şifreniz</label><input type="password" style={styles.mainInput} value={p} onChange={e => setP(e.target.value)} required autoFocus /></div>
           <button type="submit" style={styles.loginSubmitBtn}>Kilidi Aç <ArrowRight size={16} /></button>
-          <div style={{ textAlign: "center", marginTop: 4 }}><button type="button" style={styles.ghostBtn} onClick={onSwitchUser}>Farklı Hesap</button></div>
+          <button type="button" style={styles.ghostBtn} onClick={onSwitchUser}>Farklı Hesap</button>
         </form>
       </div>
     </div>
@@ -1011,23 +513,22 @@ function LockScreen({ currentUser, onUnlock, onSwitchUser, error }) {
 
 const styles = {
   appShell: { fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0F172A", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "column" },
-  header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "#1E293B", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(245, 158, 11, 0.1)" },
+  header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "#1E293B", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap" },
   brand: { display: "flex", alignItems: "center", gap: 10 },
-  logoIcon: { background: "rgba(245, 158, 11, 0.15)", padding: 8, borderRadius: 10, display: "flex" },
-  brandName: { fontWeight: 900, fontSize: 18, color: "#F59E0B", letterSpacing: "1px" },
+  brandName: { fontWeight: 900, fontSize: 18, color: "#F59E0B" },
   brandSub: { fontSize: 10, color: "#94A3B8" },
   navTabs: { display: "flex", gap: 6, background: "#0F172A", padding: 4, borderRadius: 10, flexWrap: "wrap" },
-  navTab: { display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" },
-  navTabActive: { background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B", border: "1px solid #F59E0B", boxShadow: "0 2px 8px rgba(245, 158, 11, 0.2)" },
+  navTab: { display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 12, fontWeight: 600, cursor: "pointer" },
+  navTabActive: { background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B", border: "1px solid #F59E0B" },
   navTabAdminActive: { background: "rgba(239, 68, 68, 0.2)", color: "#EF4444", border: "1px solid #EF4444" },
-  notificationBellBtn: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "pointer", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" },
+  notificationBellBtn: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "pointer", position: "relative" },
   notificationBadge: { position: "absolute", top: -4, right: -4, background: "#EF4444", color: "#FFF", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: "50%" },
   userProfileBar: { display: "flex", alignItems: "center", gap: 10, background: "#0F172A", padding: "6px 12px", borderRadius: 10, border: "1px solid #334155" },
   userAvatar: { width: 32, height: 32, borderRadius: "50%", background: "#F59E0B", color: "#0F172A", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 },
   userName: { fontSize: 12, fontWeight: 700 },
   userRoleTag: { fontSize: 10, color: "#F59E0B" },
-  actionSmallBtn: { background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 4, borderRadius: 4 },
-  errorBar: { background: "rgba(239, 68, 68, 0.2)", borderBottom: "1px solid #EF4444", padding: "8px 24px", color: "#FCA5A5", fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center" },
+  actionSmallBtn: { background: "transparent", border: "none", cursor: "pointer" },
+  errorBar: { background: "rgba(239, 68, 68, 0.2)", padding: "8px 12px", color: "#FCA5A5", fontSize: 12, borderRadius: 6 },
   mainContent: { flex: 1, padding: "20px 24px", overflowY: "auto" },
   viewContainer: { display: "flex", flexDirection: "column", gap: 20 },
   dashboardCardGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 },
@@ -1048,8 +549,8 @@ const styles = {
   filterToolbar: { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
   searchWrapper: { display: "flex", alignItems: "center", gap: 8, background: "#1E293B", padding: "8px 12px", borderRadius: 8, border: "1px solid #334155", flex: 1 },
   searchInput: { background: "transparent", border: "none", color: "#F8FAFC", fontSize: 12, outline: "none", width: "100%" },
-  primaryActionBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(245, 158, 11, 0.2)" },
-  ghostBtn: { background: "transparent", border: "1px solid #334155", color: "#94A3B8", padding: "8px 16px", borderRadius: 8, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" },
+  primaryActionBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 },
+  ghostBtn: { background: "transparent", border: "1px solid #334155", color: "#94A3B8", padding: "8px 16px", borderRadius: 8, fontSize: 12, cursor: "pointer" },
   yearEndHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 },
   viewTitle: { fontSize: 20, fontWeight: 800 },
   viewSub: { fontSize: 11, color: "#94A3B8" },
@@ -1058,18 +559,14 @@ const styles = {
   th: { borderBottom: "1px solid #334155", padding: "10px 12px", color: "#F59E0B", fontWeight: 700 },
   tr: { borderBottom: "1px solid #0F172A" },
   td: { padding: "10px 12px" },
-  tdTitle: { padding: "10px 12px", fontWeight: 700 },
   deleteIconBtn: { background: "transparent", border: "none", color: "#EF4444", cursor: "pointer" },
-  editIconBtn: { background: "transparent", border: "none", color: "#F59E0B", cursor: "pointer", fontWeight: 600, fontSize: 11, display: "flex", gap: 4, alignItems: "center" },
   loginOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 },
-  loginCard: { background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" },
+  loginCard: { background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 16 },
   loginHeader: { textAlign: "center" },
-  loginLogo: { width: 64, height: 64, borderRadius: 16, background: "rgba(245, 158, 11, 0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center" },
   inputLabel: { fontSize: 11, color: "#94A3B8", fontWeight: 600, marginBottom: 4, display: "block" },
   mainInput: { width: "100%", background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "10px 12px", color: "#F8FAFC", fontSize: 12, outline: "none" },
-  selectInput: { background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px", color: "#F8FAFC", fontSize: 12, outline: "none" },
+  selectInput: { background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px", color: "#F8FAFC", fontSize: 12, outline: "none", width: "100%" },
   loginSubmitBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "12px", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
-  unauthorizedBox: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, textAlign: "center", gap: 12, color: "#94A3B8" },
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 16 },
   drawerContainer: { background: "#1E293B", border: "1px solid #334155", borderRadius: 16, width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", overflow: "hidden" },
   createModalContent: { background: "#1E293B", border: "1px solid #334155", borderRadius: 16, width: "100%", maxWidth: 500, padding: 20 },
@@ -1077,7 +574,6 @@ const styles = {
   drawerBody: { padding: 20, display: "flex", flexDirection: "column", gap: 16 },
   closeBtn: { background: "transparent", border: "none", color: "#94A3B8", cursor: "pointer" },
   subtaskSection: { background: "#0F172A", border: "1px solid #334155", borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 },
-  subtaskRowInteractive: { display: "flex", alignItems: "center", gap: 8, background: "#1E293B", padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" },
   addInlineBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "0 12px", borderRadius: 6, fontWeight: 700, fontSize: 11, cursor: "pointer" },
   drawerFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderTop: "1px solid #334155" },
   deleteDangerBtn: { background: "rgba(239, 68, 68, 0.15)", color: "#EF4444", border: "1px solid #EF4444", padding: "6px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer" },
