@@ -1,5 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { db } from "./firebase";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import {
   CheckSquare, Square, Plus, Trash2, Download, Upload, Sparkles,
   Calendar, Users, Target, AlertTriangle, CheckCircle2, Clock,
@@ -49,23 +51,23 @@ const INITIAL_CHATS = [
   { id: "chat-genel", type: "general", title: "Genel Ekip Sohbeti", participants: [], messages: [{ id: "m-1", sender: "Ahmet Yılmaz", text: "Arkadaşlar toplantı verileri hazır mı?", time: "08:30" }] }
 ];
 
-export default function App() {
-  const [usersList, setUsersList] = useState(() => {
-    try { const s = localStorage.getItem("dva_users_v4"); return s ? JSON.parse(s) : INITIAL_USERS; } catch(e) { return INITIAL_USERS; }
-  });
-  const [tasks, setTasks] = useState(() => {
-    try { const s = localStorage.getItem("dva_tasks_v4"); return s ? JSON.parse(s) : INITIAL_TASKS; } catch(e) { return INITIAL_TASKS; }
-  });
-  const [todos, setTodos] = useState(() => {
-    try { const s = localStorage.getItem("dva_todos_v4"); return s ? JSON.parse(s) : INITIAL_TODOS; } catch(e) { return INITIAL_TODOS; }
-  });
-  const [chats, setChats] = useState(() => {
-    try { const s = localStorage.getItem("dva_chats_v4"); return s ? JSON.parse(s) : INITIAL_CHATS; } catch(e) { return INITIAL_CHATS; }
-  });
-  const [notifications, setNotifications] = useState(() => {
-    try { const s = localStorage.getItem("dva_notifs_v4"); return s ? JSON.parse(s) : []; } catch(e) { return []; }
-  });
+const SHARED_DOC = doc(db, "app_data", "shared");
 
+export default function App() {
+  // Bu beş liste artık ekibin TAMAMI arasında paylaşılıyor: hepsi tek bir
+  // Firestore dokümanında (app_data/shared) tutuluyor ve onSnapshot ile
+  // gerçek zamanlı senkronize ediliyor. Kim bir görev/mesaj eklerse,
+  // uygulaması açık olan herkeste anında görünür.
+  const [usersList, setUsersList] = useState(INITIAL_USERS);
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [todos, setTodos] = useState(INITIAL_TODOS);
+  const [chats, setChats] = useState(INITIAL_CHATS);
+  const [notifications, setNotifications] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const isRemoteUpdate = useRef(false);
+
+  // currentUser / isLocked kasıtlı olarak localStorage'da kalıyor — bu,
+  // paylaşımlı veri değil, sadece "bu tarayıcıda kim oturum açmış" bilgisi.
   const [currentUser, setCurrentUser] = useState(() => {
     try { const s = localStorage.getItem("dva_current_user_v4"); return s ? JSON.parse(s) : null; } catch(e) { return null; }
   });
@@ -81,17 +83,51 @@ export default function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
+  // 1) Firestore'u dinle: doküman değiştiğinde (biri veri eklediğinde/
+  //    değiştirdiğinde, ya da başka bir cihazdan giriş yapıldığında) yerel
+  //    state'i güncelle. Doküman hiç yoksa (ilk kurulum) başlangıç
+  //    verisiyle oluştur.
+  useEffect(() => {
+    const unsub = onSnapshot(
+      SHARED_DOC,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          isRemoteUpdate.current = true;
+          setUsersList(d.users || INITIAL_USERS);
+          setTasks(d.tasks || INITIAL_TASKS);
+          setTodos(d.todos || INITIAL_TODOS);
+          setChats(d.chats || INITIAL_CHATS);
+          setNotifications(d.notifications || []);
+        } else {
+          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [] }).catch(() => {});
+        }
+        setDataLoaded(true);
+      },
+      (err) => {
+        setError("Veritabanına bağlanılamadı: " + err.message);
+        setDataLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 2) Yerel bir değişiklik (görev eklendi, durum değişti, mesaj gönderildi
+  //    vb.) olduğunda Firestore'a yaz. isRemoteUpdate bayrağı, Firestore'dan
+  //    az önce gelen veriyi tekrar Firestore'a yazıp gereksiz bir döngü
+  //    oluşturmamızı engelliyor.
+  useEffect(() => {
+    if (!dataLoaded) return;
+    if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
+    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
+  }, [usersList, tasks, todos, chats, notifications, dataLoaded]);
+
   useEffect(() => {
     try {
-      localStorage.setItem("dva_users_v4", JSON.stringify(usersList));
-      localStorage.setItem("dva_tasks_v4", JSON.stringify(tasks));
-      localStorage.setItem("dva_todos_v4", JSON.stringify(todos));
-      localStorage.setItem("dva_chats_v4", JSON.stringify(chats));
-      localStorage.setItem("dva_notifs_v4", JSON.stringify(notifications));
       if (currentUser && !isLocked) localStorage.setItem("dva_current_user_v4", JSON.stringify(currentUser));
       else if (!currentUser) localStorage.removeItem("dva_current_user_v4");
     } catch(e) {}
-  }, [usersList, tasks, todos, chats, notifications, currentUser, isLocked]);
+  }, [currentUser, isLocked]);
 
   const addNotification = (targetName, text) => {
     const n = { id: uid(), user: targetName, text, date: todayStr(), read: false };

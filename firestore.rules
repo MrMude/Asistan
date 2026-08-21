@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ÖNEMLİ — OKUYUN:
+    // Bu uygulama kendi kullanıcı adı/şifre kontrolünü yapıyor (Firebase Auth
+    // KULLANMIYOR). Firestore'un "authenticated" kavramı bunu bilmiyor.
+    // Bu yüzden bu kural şu an "herkes okuyup yazabilir" diyor —
+    // yani bu doküman adresini (proje config'ini) bilen HERKES,
+    // giriş ekranını hiç görmeden verinize erişebilir/silebilir.
+    //
+    // Bu, küçük bir ekip için geçici olarak kabul edilebilir ama gerçek
+    // güvenlik değildir. Doğru çözüm: giriş ekranını Firebase
+    // Authentication'a taşımak. Bunu istersen ayrıca yaparız.
+    match /app_data/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
