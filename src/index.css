@@ -1,2 +1,14 @@
 /* STREAMING_CHUNK:Clearing default index.css styles... /
 / Varsayılan Vite stillerinin çakışmasını önlemek için boş bırakılmıştır. */
+/* Yazdırma (Print) düzeni — Dashboard ve Detaylı Rapor'daki "Yazdır"
+   butonları için. Koyu tema arka planları yazdırmaya uygun değil ve
+   header/nav/sohbet balonu gibi öğeler yazdırmada gereksiz; bu kural
+   sadece asıl içeriği (id="print-area") beyaz zeminde, siyah yazıyla
+   basar; .no-print işaretli öğeler yazdırmaya hiç girmez. */
+@media print {
+  .no-print { display: none !important; }
+  * { background: #ffffff !important; color: #000000 !important; box-shadow: none !important; border-color: #cccccc !important; }
+  #print-area { padding: 0 !important; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc !important; }
+}
