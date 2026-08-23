@@ -38,19 +38,117 @@ const KANBAN_STAGES = [
   { id: "acik", label: "Açık / Yeni", color: "#EF4444" },
   { id: "devam", label: "Devam Ediyor", color: "#F59E0B" },
   { id: "beklemede", label: "Beklemede", color: "#3B82F6" },
-  { id: "tamam", label: "Tamamlandı", color: "#10B981" }
+  { id: "tamam", label: "Tamamlandı", color: "#10B981" },
+  { id: "iptal", label: "İptal Edildi", color: "#6B7280" }
 ];
 
+// Araç Akış Takibi — kullanıcının tanımladığı gerçek üretim akışı.
+// Bir araç ya Fabrika 1'de ya da Depo'da olur; her konumun kendi sabit
+// aşama sırası vardır. Depo'da "Serbestlik" son aşamadır. Rework/tamir
+// gerekiyorsa aracın "reworklar" listesine ayrı kayıt eklenir, ana akış
+// aşamasını değiştirmeden.
+const FABRIKA1_STAGES = ["Lift", "EOL", "Şarj Testi", "Sürüş Testi"];
+const DEPO_STAGES = ["Sürüş Testi", "Sızdırmazlık Testi", "Final Kontrol", "Elektrik Kontrol", "Serbestlik"];
+const KONUM_META = { fabrika1: { label: "Fabrika 1", color: "#38BDF8" }, depo: { label: "Depo", color: "#F59E0B" } };
+
+
 const INITIAL_USERS = [
-  { id: "usr-admin", username: "admin", password: "0000", name: "Sistem Yöneticisi (Admin)", role: "admin", status: "approved" },
-  { id: "usr-ahmet", username: "ahmet", password: "0000", name: "Ahmet Yılmaz", role: "moderator", status: "approved" },
-  { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved" }
+  { id: "usr-admin", username: "admin", password: "0000", name: "Sistem Yöneticisi (Admin)", role: "admin", status: "approved", canViewReports: true },
+  { id: "usr-ahmet", username: "ahmet", password: "0000", name: "Ahmet Yılmaz", role: "moderator", status: "approved", canViewReports: false },
+  { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", canViewReports: false }
 ];
 
 // Demo/örnek veri kasıtlı olarak boş bırakıldı — sistem gerçek kullanım
 // için sıfırdan başlıyor. Yeni bir üye giriş yaptığında da görev/to-do
 // listesi boş gelir, sadece kendi eklediklerini görür.
-const INITIAL_TASKS = [];
+// Kullanıcının 'Kalite İş Takibi' Excel/ODS dosyasından aktarılan gerçek
+// görev geçmişi — Kalite Güvence modülüne entegre edildi (82 kayıt).
+const KIT_TASKS = [
+  { id: "kit-1", module: "kalite_guvence", kod: "KIT-2026-001", baslik: "QC Etiketleri", sorumlu: "Atanmadı", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-01", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-1-st1", text: "01.06.2026 tarihinde sipariş verilecektir.", done: true }] },
+  { id: "kit-2", module: "kalite_guvence", kod: "KIT-2026-002", baslik: "İstasyon Kontrol & Quality Gate oluşturulması", sorumlu: "Kahan YILMAZMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "2026-06-26", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-2-st1", text: "Kahan Beyde çalıştırma oluşturdu. İlk hafta kullanımı gözlemlenecektir.", done: true }, { id: "kit-2-st2", text: "Doğukanın oluşturduğu istasyon talimatları sisteme eklenecektir.( Eklendi )", done: true }, { id: "kit-2-st3", text: "Kontrol formları kontrol edilecektir ve işleme alınacaktır.", done: true }] },
+  { id: "kit-3", module: "kalite_guvence", kod: "KIT-2026-003", baslik: "Kormetal ( Jant Tedarikçi Firması )", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-3-st1", text: "02.06.2026 tarihinde mail atılacaktır. Akış hakkında bilgi alınacaktır.", done: true }, { id: "kit-3-st2", text: "02.06.2026 Tarihinde hatırlatma maili atıldı.", done: true }, { id: "kit-3-st3", text: "Etiket konusu ve görsel kontrol kriterleri belirlendi.", done: true }] },
+  { id: "kit-4", module: "kalite_guvence", kod: "KIT-2026-004", baslik: "Kompanent Test Masası", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "2026-06-26", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-4-st1", text: "Kompanent test masası balçığa gönderilecektir.", done: true }, { id: "kit-4-st2", text: "İdari işler grubuna yazalım ve kamyon gelince dürtelim", done: true }] },
+  { id: "kit-5", module: "kalite_guvence", kod: "KIT-2026-005", baslik: "Boyahane süreci geliştirmesi", sorumlu: "Şenol ÖZCANLI", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-5-st1", text: "Şenol Bey'le kontrol kriterleri belirlenecektir.", done: true }, { id: "kit-5-st2", text: "Boyahaneye dair tüm dokümantasyonlar oluşturulmalı. Görselli talimatlar, vs.Şenol süreci ilerlettiğinde tekrar açılacaktır.", done: true }] },
+  { id: "kit-6", module: "kalite_guvence", kod: "KIT-2026-006", baslik: "Aylin Hanım ( Yapıştırma Mühendisi )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-6-st1", text: "Uçak bileti alınacaktır. 08.06.2026 tekrar görüşülecektir.", done: true }] },
+  { id: "kit-7", module: "kalite_guvence", kod: "KIT-2026-007", baslik: "Basf Eftec İle görüşülecektir.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-7-st1", text: "Yapıştırmalar hakkında bilgi alınacaktır. Saklama şartları vb.", done: true }, { id: "kit-7-st2", text: "Abdulsamet Bey'le görüşme sağlandı. Firma ziyareti organize edilecektir.", done: true }, { id: "kit-7-st3", text: "Astarlı test plakası numunesi hazırlanacaktır.", done: true }, { id: "kit-7-st4", text: "09.06.2026 tarihinde ziyarete gelecektir.", done: true }] },
+  { id: "kit-8", module: "kalite_guvence", kod: "KIT-2026-008", baslik: "Kalite Güvence Geliştirmesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-27", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-8-st1", text: "23. Hafta araç kontrol formları sisteme eklenecektir. İlk çıkan araçların formları taranıp klasörü belirlenecektir.23. Hafta Kalite Kontrol24. Hafta Satınalma - Lojistik24. Hafta Planlama ve Depolama25. Hafta Üretim26. Hafta Satış - Pazarlama - Satış Sonrası Hizmetler27. Hafta Mühendislik", done: true }] },
+  { id: "kit-9", module: "kalite_guvence", kod: "KIT-2026-009", baslik: "ERP İzinlerin Girişi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-01", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-9-st1", text: "İzinli personellerin izin girişleri yapılacaktır.", done: true }] },
+  { id: "kit-10", module: "kalite_guvence", kod: "KIT-2026-010", baslik: "COP Evrakları Hk.", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "2026-06-26", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-10-st1", text: "Onur Bey'e yazıldı. Süreç ilerledikçe bilgi verilecektir.", done: true }, { id: "kit-10-st2", text: "Onur Bey inceleyip dönüş sağlayacak. Haftaya tekrar hatırlatılacaktır.COP Eğitimi planlanabilir.Aşağıda güncel konular açılmıştır. 07.07.2026", done: true }] },
+  { id: "kit-11", module: "kalite_guvence", kod: "KIT-2026-011", baslik: "Asil Kataforez Ziyareti Hk.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-01", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-11-st1", text: "• Kataforez kaplama süreci ile ilgili ziyaret yapılacaktır.• Ziyaret gerçekleştirildi. Aksiyon uygulama maili gelecektir.", done: true }, { id: "kit-11-st2", text: "Üretim çıktıları beklenmektedir.", done: true }] },
+  { id: "kit-12", module: "kalite_guvence", kod: "KIT-2026-012", baslik: "Boyahane, End Of Line, Balçık Depo Süreç Takibi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-01", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-12-st1", text: "Taslak oluşturuldu. Günlük mail atılacaktır.", done: true }, { id: "kit-12-st2", text: "02.06.2026 toplantısı yapıldıı, bu şekilde devam edecektir.", done: true }] },
+  { id: "kit-13", module: "kalite_guvence", kod: "KIT-2026-013", baslik: "Gapster (SSH)", sorumlu: "Atanmadı", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-01", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-13-st1", text: "Servis süreçlerinin takibi için adım eklenecektir. Birçim ve satış sonrası ekibiyle görüşülecektir.", done: true }] },
+  { id: "kit-14", module: "kalite_guvence", kod: "KIT-2026-014", baslik: "Uygunsuzluk Takibi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-01", vade: "", bitisTarihi: "2026-06-02", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-14-st1", text: "54 No'lu aracın sağ arka fren borusu ve fren hortumu birleşim yerinden hidrolik kaçağı tespit edildi. Şasi montajında ya tam değerlerde torklama işlemi yapılmadı ya da boruda deforme mevcut kontrol edilip bilgi verilecek.", done: true }, { id: "kit-14-st2", text: "Murat Bey'le görüşme sağlanmıştır.", done: true }] },
+  { id: "kit-15", module: "kalite_guvence", kod: "KIT-2026-015", baslik: "Atık Kutusu", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-02", vade: "2026-06-26", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-15-st1", text: "https://teknikkonteyner.com.tr/urun/240-lt-pedalli-plastik-cop-konteyneri-40", done: true }, { id: "kit-15-st2", text: "2 Adet sipariş verilecektir.Burak Bey ve Ömer Bey'e mail atılmıştır. Burak Bey şubeye geldiğinde bakılacaktır. ( Chimerecten fiyat teklifi alındı dönüş beklenmektedir.)", done: true }] },
+  { id: "kit-16", module: "kalite_guvence", kod: "KIT-2026-016", baslik: "Kimyasal ve Son Kullanım Tarihi Olan Ürünler", sorumlu: "Sennur Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-02", vade: "2026-06-26", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-16-st1", text: "Ürünlere ait liste oluşturulacaktır.", done: true }, { id: "kit-16-st2", text: "Sennur Hanım ve Ozan Bey'den liste istenmiştir.", done: true }, { id: "kit-16-st3", text: "Dolap siparişi için Ömer'e mail atıldı.", done: true }] },
+  { id: "kit-17", module: "kalite_guvence", kod: "KIT-2026-017", baslik: "Sibop Montajı", sorumlu: "-", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-03", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-17-st1", text: "Kormetalden gelecek jantlarda sibop montajı ve testleri belirlenmelidir.", done: true }, { id: "kit-17-st2", text: "Aletlerin siparişi verilmiştir. Teslimatı beklenmektedir.", done: true }] },
+  { id: "kit-18", module: "kalite_guvence", kod: "KIT-2026-018", baslik: "Şasi Kritik Bölge Formu", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-03", vade: "", bitisTarihi: "2026-06-10", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-18-st1", text: "Cemre Hanım'la görüşülerek form oluşturulacaktır.", done: true }, { id: "kit-18-st2", text: "Murat Bey formu oluşturdu sisteme eklenecektir.Form Hikmet Ustaya teslim edildi.", done: true }] },
+  { id: "kit-19", module: "kalite_guvence", kod: "KIT-2026-019", baslik: "Cam Serigrafi Hatası", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-03", vade: "2026-06-26", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-19-st1", text: "Tedarikçiye mail atılmıştır.", done: true }, { id: "kit-19-st2", text: "Dönüş beklenmektedir.Dönüş gelmediği için iptal edilmiştir.", done: true }] },
+  { id: "kit-20", module: "kalite_guvence", kod: "KIT-2026-020", baslik: "Müşteri Hata Bildirimi – Analiz Formu", sorumlu: "Emir KÜÇÜKMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-03", vade: "", bitisTarihi: "2026-06-04", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-20-st1", text: "N7V1K1SA1TK000043 hata analiz formu açıldı. Yasir Beylerle görüşüp doldurulacaktır.", done: true }, { id: "kit-20-st2", text: "Gökhan Bey formu doldurdu", done: true }] },
+  { id: "kit-21", module: "kalite_guvence", kod: "KIT-2026-021", baslik: "Bounder Eğitimi Hk.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-03", vade: "", bitisTarihi: "2026-06-04", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-21-st1", text: "Kiwaya mail atıldı. Dönüş beklenmektedir.", done: true }, { id: "kit-21-st2", text: "Firma ziyareti gerçekleştirildi.", done: true }] },
+  { id: "kit-22", module: "kalite_guvence", kod: "KIT-2026-022", baslik: "Kilit Testi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-04", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-22-st1", text: "Kapı Kilit Modülleri Test edilecektir.", done: true }, { id: "kit-22-st2", text: "Cihazda 4 adet test edildi. Cihaz kitlediği için kendini test edemiyoruz.", done: true }] },
+  { id: "kit-23", module: "kalite_guvence", kod: "KIT-2026-023", baslik: "Yapıştırma Testi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-04", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-23-st1", text: "60 numaralı araçta cam maskelenerek yapıştırılmıştır. 7,5mm genişlik.61 numaralı araçta cam maskelenerek yapıştırılacaktır. 6 mm genişlik", done: true }, { id: "kit-23-st2", text: "Camlardan kaçırma gözlemlenmemiştir.", done: true }] },
+  { id: "kit-24", module: "kalite_guvence", kod: "KIT-2026-024", baslik: "Ürün Ömür Testi", sorumlu: "Gökhan KONUK", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-05", vade: "", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-24-st1", text: "Ürünlerin ömür testi için fiyat teklifi alınacaktır.", done: true }, { id: "kit-24-st2", text: "Gökhan Bey teklif alacaktır.Cemre Hanım'a mail atıldı.", done: true }] },
+  { id: "kit-25", module: "kalite_guvence", kod: "KIT-2026-025", baslik: "Yapıştırma Alanı", sorumlu: "Atanmadı", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-05", vade: "", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-25-st1", text: "Yapıştırma alanı yaratılması hakkında mail atılacaktır.", done: true }, { id: "kit-25-st2", text: "Ömer Bey'in ilettiği aksiyonlar öncelikli olarak yapılacaktır.", done: true }] },
+  { id: "kit-26", module: "kalite_guvence", kod: "KIT-2026-026", baslik: "Mühendislik Değişiklik Yönetimi", sorumlu: "Doğukan TOKAYAdem YILMAZZOBU", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-05", vade: "", bitisTarihi: "2026-06-05", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-26-st1", text: "Süreç için form hazırlanacaktır.", done: true }, { id: "kit-26-st2", text: "Form mail atıldı.", done: true }] },
+  { id: "kit-27", module: "kalite_guvence", kod: "KIT-2026-027", baslik: "Yapıştırma İyileştirmeleri", sorumlu: "Muharrem DELİKTAŞDoğukan TOKAYAdem YILMAZZOBU", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-27-st1", text: "Ömer Beyden gelen dönüş yandaki gibidir.", done: true }, { id: "kit-27-st2", text: "Plastik – Plastik yapışma yüzeylerine astar uygulamak ( Uygulama bugünden itibaren devreye alındı, yüzey gerilimleri kontrol edilmesi gerekecektir. )", done: true }, { id: "kit-27-st3", text: "Henkele ilgili parçalardan numune verip, yapışma testlerini gerçekleştirmesini sağlamak, ( Firma temsilcimizi öğrendikten sonra süreci orayla da devam ettirebiliriz ? )", done: true }, { id: "kit-27-st4", text: "Primerin kullanımdan önce çalkalanması operatörün insiyatifine bırakılıyor. Primer çalkalanmazsa büyük risk. Çalkalanmasını sağlayacak basit bir shaker alınması ( Murat Bey’le görüşüldü çalışmasını yürütüyor. )", done: true }, { id: "kit-27-st5", text: "Yapıştırma alanı çok pis. Alanın kapatılması öncesinde alandaki kimyasalların, atıkları, yapıştırma alanının temizlenmesini sağlamak ve operatörlerin düzenli çalışmasını sağlamak, 5S yapmak bence öncelikli,( Alan temizliği için Kahan Bey’le görüşüldü. Kimyasal atıkları için şu an firmamızda atık toplama yeri temin edemiyoruz, çözüm için bir yol bulmaya çalışacağız. )", done: true }, { id: "kit-27-st6", text: "Yüzey gerilimini ölçen sıvıların aralıklı olarak günlük operasyonda, operatörler tarafından tanımlı adetlerde uygulanmasını sağlamak. ( Astar çalışması için gerektiğinden devreye alınacaktır. )", done: true }, { id: "kit-27-st7", text: "Yapışma sonrası ilgili tutma kuvvetinin parçanın özellikle tutunmanın en zor olduğu kısımlarında (uçlarda) sağlandığından emin olmak ( Süreç içerisinde iyileştirme çalışmalarıyla raporlanarak ilerletilecektir. )", done: true }, { id: "kit-27-st8", text: "Yapıştırma fisktürlerinin ergonomisi ve yapışma yüzeylerini tutmasından emin olmak, ( Süreç içerisinde uzun gözlemler sonucu raporlanarak iletilecektir. )", done: true }] },
+  { id: "kit-28", module: "kalite_guvence", kod: "KIT-2026-028", baslik: "Başkent Cam Çalışma Süreci", sorumlu: "Orkun ERDOĞAN", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-09", vade: "2026-06-30", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-28-st1", text: "Orkun Bey firma ile görüşme sağlayacaktır.", done: true }, { id: "kit-28-st2", text: "Mail adresleri ve telefonları iletildi.", done: true }, { id: "kit-28-st3", text: "19.06 teklif dönüş hedef tarihi.", done: true }, { id: "kit-28-st4", text: "22.06 Teklif karşılaştırma ve direction seçimi yapılması ( Telefon edildi süreç devam ediyor..)07.07.2026 güncel konu açılmıştır.", done: true }] },
+  { id: "kit-29", module: "kalite_guvence", kod: "KIT-2026-029", baslik: "Basf Eftect Test Numunesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-08", vade: "2026-07-08", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-29-st1", text: "2 farklı astardan numune hazırlanarak Eftect firmasına gönderilecektir.", done: true }, { id: "kit-29-st2", text: "Test numuneleri teslim edilmiştir.Firmaya mail atılacaktır.Hatırlatma yapıldı.(20.07.2026)Test sonuçları gelmiştir.", done: true }] },
+  { id: "kit-30", module: "kalite_guvence", kod: "KIT-2026-030", baslik: "Henkel Yapıştırıcı Çalışmaları", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-16", vade: "2026-06-26", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-30-st1", text: "Teroson PU 8590 ve Teroson PU 8599 test numunesi hazırlanarak tedarikçiye test için verilecektir.", done: true }, { id: "kit-30-st2", text: "Firma ziyareti beklenmektedir.18.06.2026 tarihinde gelecekler.Detaylar mail atıldı.", done: true }] },
+  { id: "kit-31", module: "kalite_guvence", kod: "KIT-2026-031", baslik: "38 Numaralı Araç Tamiri", sorumlu: "Muharrem DELİKTAŞÜretim", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-10", vade: "", bitisTarihi: "2026-06-12", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-31-st1", text: "Aracın tavanının sökülmesi hakkında çalışma yapılacaktır.Cam sökümü yapılacaktır.", done: true }, { id: "kit-31-st2", text: "Ortalama yarım günde sökme işlemleri tamamlanmıştır. Aracın temizliği de ortalama yarım gün sürmektedir.", done: true }] },
+  { id: "kit-32", module: "kalite_guvence", kod: "KIT-2026-032", baslik: "Kormetal Numune Üretimi", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-15", vade: "2026-06-19", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-32-st1", text: "1.Black2.Gunmetal Gray3.Gunmetal Diamond", done: true }, { id: "kit-32-st2", text: "3 araçlık 3 farklı renkte numune çalışılacaktır.19.06.2026 tarihinde jantlar geldi.Pazarlama ekibinden dönüş beklenmektedir.", done: true }] },
+  { id: "kit-33", module: "kalite_guvence", kod: "KIT-2026-033", baslik: "Tavan Test Numunesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-15", vade: "2026-06-23", bitisTarihi: "2026-06-19", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-33-st1", text: "Yapıştırıcı ince çekilerek numune hazırlanmıştır.", done: true }, { id: "kit-33-st2", text: "Test için kürlenmesi beklenmektedir. ( Araç şasine test yazıldı, evlendirildiğinde bakılacaktır. )Bu aksiyon kapatıldı. \" Süreç Henkel Yapıştırma İyileştirmeleri \" içerisinde devam edecektir.", done: true }] },
+  { id: "kit-34", module: "kalite_guvence", kod: "KIT-2026-034", baslik: "Bodylerin Taranması", sorumlu: "Hüseyin YILDIRIM", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-15", vade: "", bitisTarihi: "2026-06-16", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-34-st1", text: "Tarama firmasıyla Cemre Hanım görüşme sağladı.", done: true }, { id: "kit-34-st2", text: "Pazartesi - Salı günü firmanın gelmesi beklenmektedir.Raporlar incelenecektir.", done: true }] },
+  { id: "kit-35", module: "kalite_guvence", kod: "KIT-2026-035", baslik: "Şahit Numune Bölgesi", sorumlu: "Şenol ÖZCANLI", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "2026-06-26", bitisTarihi: "2026-06-23", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-35-st1", text: "Plastik Enejksiyon tarafında raf olacaktır.", done: true }, { id: "kit-35-st2", text: "Süreci Şenol takip ediyor.Raf yaptırıldı, ürünler orada stoklanacaktır.", done: true }] },
+  { id: "kit-36", module: "kalite_guvence", kod: "KIT-2026-036", baslik: "Boyahane ve EOL Takip - Raporlama", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-12", vade: "", bitisTarihi: "2026-06-12", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-36-st1", text: "Form yeniden düzenlenecektir.", done: true }, { id: "kit-36-st2", text: "Tamamlanmıştır.", done: true }] },
+  { id: "kit-37", module: "kalite_guvence", kod: "KIT-2026-037", baslik: "Tavan İyileştirme Çalışması", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-15", vade: "", bitisTarihi: "2026-06-16", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-37-st1", text: "Klipsler iptal edilerek, yapıştırma işlemi yapılacaktır. Araç numaraları için liste oluşturuldu.Klipsler söküldü, süreç izlenecektir.", done: true }, { id: "kit-37-st2", text: "Mühendislik değişiklik formu oluşturuldu. Sisteme eklendi.", done: true }] },
+  { id: "kit-38", module: "kalite_guvence", kod: "KIT-2026-038", baslik: "Araç Kontrol Dosyaları", sorumlu: "Hüseyin YILDIRIM", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-22", vade: "2026-06-26", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-38-st1", text: "Araç kontrol dosyaları Hüseyin'de onlar ay ay klasörlenerek arşivlenecektir.", done: true }, { id: "kit-38-st2", text: "Hüseyin dosyaları temize çekiyormuş. 22sinde ondan teslim alınarak işlemlere başlanacaktır.Dönüş alınamadı.", done: true }] },
+  { id: "kit-39", module: "kalite_guvence", kod: "KIT-2026-039", baslik: "Final kontrol formu güncellenecektir.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-17", vade: "2026-06-17", bitisTarihi: "2026-06-17", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-39-st1", text: "Üzerinde çalışmalara başlanmıştır.", done: true }] },
+  { id: "kit-40", module: "kalite_guvence", kod: "KIT-2026-040", baslik: "HENKEL Yapıştırma İyileştirme Çalışmaları", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-19", vade: "2026-07-01", bitisTarihi: "2026-08-31", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-40-st1", text: "• Cam - Metal• Tavan - Metal ( 26.06.2026 tarihinde uygulama yapıldı. )• Plastik - Plastik• Plastik - Cam", done: true }, { id: "kit-40-st2", text: "İlk başlangıç tavan metal ile olacaktır. Numune ürünler \" 19.06.2026 \" tarihinde teslim edilecektir.Numuneler test için teslim edildi. 25.06.2026 sonuçlar çıkacaktır.", done: true }] },
+  { id: "kit-41", module: "kalite_guvence", kod: "KIT-2026-041", baslik: "Kapı Vidaları Hk.", sorumlu: "Doğukan TOKAYAdem YILMAZZOBA", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-23", vade: "2026-06-30", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-41-st1", text: "Kapı iç montajında kullanılan vidaların paslanmaz çelik veya galvaniz kaplı gibi korozyon direnci yüksek malzemelerle değiştirilmesi gerekmektedir.", done: true }, { id: "kit-41-st2", text: "Doğukan ve Adem'e mail atıldı.", done: true }, { id: "kit-41-st3", text: "Tekrar sorulacaktır ( 02.07.2026 )", done: true }] },
+  { id: "kit-42", module: "kalite_guvence", kod: "KIT-2026-042", baslik: "Su Testi Kabini", sorumlu: "Alp ERGENÇMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-23", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-42-st1", text: "Alp hocayla birlikte su testi kabini incelenecektir.", done: true }, { id: "kit-42-st2", text: "Test kabini şubeye alınacaktır, burada yeniden kurulum sürecinde bakılacaktır.", done: true }] },
+  { id: "kit-43", module: "kalite_guvence", kod: "KIT-2026-043", baslik: "Fren Servosu ve Bıw Birleşimi", sorumlu: "Muharrem DELİKTAŞHikmet ŞAHİN", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-23", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-43-st1", text: "Servonun bodyle birleştiği yerdeki contalar ve fren pedalının üstündeki conta kontrol edilecektir.", done: true }, { id: "kit-43-st2", text: "Kontroller sağlandı, operatörler süreci doğru uygulamaktadır.", done: true }] },
+  { id: "kit-44", module: "kalite_guvence", kod: "KIT-2026-044", baslik: "Sentil Ölçümleri Hk.", sorumlu: "Hüseyin YILDIRIM", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-06-26", vade: "", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-44-st1", text: "Sentil çakısı ile araçlar final kontrolde ölçülecek ve tolerans değerleri belirlenecektir.", done: true }, { id: "kit-44-st2", text: "Süreçle ilgili veri gelmedi.", done: true }] },
+  { id: "kit-45", module: "kalite_guvence", kod: "KIT-2026-045", baslik: "Henkel Test İlerlemesi Hk.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-02", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-45-st1", text: "Taha Bey'le görüşme sağlanacaktır. • Yaşlandırma testleri yapılabilir mi ?• Tavan sökme / yapıştırma süreci ne zaman yapılacaktır ?", done: true }, { id: "kit-45-st2", text: "Test için Taha Bey teklif alıp dönecektir.20.07.2026 - 31.07.2026 tarihleri arasında hem tavan sökülecektir hemde yeni ürünler test edilecektir.Tavan sökme sürecine başlanmıştır. ( 22.07.2026 )Tavan sökme süreci tamamlanmıştır. Testler bağımsız dış firmada yapılabilmektedir.", done: true }] },
+  { id: "kit-46", module: "kalite_guvence", kod: "KIT-2026-046", baslik: "Yerlileştirme Projesi ( Cam Çalışması )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-06", vade: "2026-07-06", bitisTarihi: "2026-07-06", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-46-st1", text: "• Başkent Cam ziyaret edilecektir. ( 06.07.2026 )", done: true }, { id: "kit-46-st2", text: "Rapor sonucu mail atılmıştır.", done: true }] },
+  { id: "kit-47", module: "kalite_guvence", kod: "KIT-2026-047", baslik: "Yerlileştirme Projesi ( Batarya Paketi )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-47-st1", text: "• Cw enerji ile görüşülecektir.• Imecar ile görüşülecektir.", done: true }] },
+  { id: "kit-48", module: "kalite_guvence", kod: "KIT-2026-048", baslik: "Yerlileştirme Projesi ( Metal Karkas )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-48-st1", text: "Maenso ekibi tarafından yönetilecektir.", done: true }] },
+  { id: "kit-49", module: "kalite_guvence", kod: "KIT-2026-049", baslik: "Yerlileştirme Projesi ( Koltuk )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-49-st1", text: "Pilot koltuk ile görüşülecektir.", done: true }] },
+  { id: "kit-50", module: "kalite_guvence", kod: "KIT-2026-050", baslik: "Yerlileştirme Projesi ( Korna )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-16", vade: "2026-07-31", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-50-st1", text: "Seger firmasından temin edilecekitir.Kalite dokümanları hakkında görüşmek için mail atıldı.21.07.2026 Toplantı yapılacaktır. ( SOR dosyasında teknik bilgiler incelenecektir. )Teknik resim onayı beklemektedir. ( 10.08.2026 )", done: true }, { id: "kit-50-st2", text: "PPAP Hazırlığı: Seviye 3 (Level 3) PPAP dosyalarının hazırlanması,", done: true }, { id: "kit-50-st3", text: "Sertifikasyon: Minimum ISO 9001 kalite belgesinin sunulması,", done: true }, { id: "kit-50-st4", text: "Paketleme: Paketleme şartnamesinin oluşturularak tarafımıza iletilmesi,", done: true }, { id: "kit-50-st5", text: "Etiketleme: Sistemlerimize uyumlu etiket formatının netleştirilmesi,", done: true }, { id: "kit-50-st6", text: "Şahit Numune: Karşılıklı olarak 1'er adet şahit numune belirlenmesi,", done: true }, { id: "kit-50-st7", text: "Sevkiyat Dokümantasyonu: Her sevkiyatta malzeme sertifikası ve ölçüm raporlarının paylaşılması,", done: true }, { id: "kit-50-st8", text: "Firma Ziyareti / Denetimi: Tarafımızca gerçekleştirilecek süreç denetimi. (17-28 Ağustos )", done: true }, { id: "kit-50-st9", text: "Teknik resim onaylanıp, firmaya iletilecektir.", done: true }] },
+  { id: "kit-51", module: "kalite_guvence", kod: "KIT-2026-051", baslik: "Yerlileştirme Projesi ( Ayna )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-16", vade: "2026-07-31", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-51-st1", text: "Eraynadan temin edilecektir.Hatırlatma maili atılmıştır.", done: true }, { id: "kit-51-st2", text: "Kalite evrakları ile ilgili mail atılmıştır. ( 20.07.2026 Hatırlatma atıldı. )17-28 Ağustos arasında ziyaret yapılacaktır, fakat firma üretimi Yozgattadır.", done: true }] },
+  { id: "kit-52", module: "kalite_guvence", kod: "KIT-2026-052", baslik: "Homologasyon", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-08", vade: "2026-07-10", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-52-st1", text: "Dokümanlar okunup incelenecektir.", done: true }] },
+  { id: "kit-53", module: "kalite_guvence", kod: "KIT-2026-053", baslik: "COP", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-08", vade: "2026-07-10", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-53-st1", text: "Dokümanlar okunup incelenecektir.KYS kurulumu yapılacaktır. ( Yeni arkadaş gelince başlanacaktır. )", done: true }] },
+  { id: "kit-54", module: "kalite_guvence", kod: "KIT-2026-054", baslik: "Tip Onayı Genişletme", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "2026-07-29", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-54-st1", text: "Toplantı yapılacaktır.", done: true }, { id: "kit-54-st2", text: "Görüşme yapıldı, Cemre Hanım takip ediyor notlarını paykaşacak.", done: true }] },
+  { id: "kit-55", module: "kalite_guvence", kod: "KIT-2026-055", baslik: "Bostancı Şube Tamir", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-09", vade: "2026-07-09", bitisTarihi: "2026-07-09", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-55-st1", text: "Araç kaputu kalkmaktadır. Perşembe günü yerinde tamir olacaktır", done: true }, { id: "kit-55-st2", text: "Tamir yapılmıştır.", done: true }] },
+  { id: "kit-56", module: "kalite_guvence", kod: "KIT-2026-056", baslik: "Araç Fotoğraf Takip Sistemi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-07", vade: "2026-07-10", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-56-st1", text: "Birçin Hanım'dan fotoğraf yükleme alanı için dönüş beklenmektedir.", done: true }, { id: "kit-56-st2", text: "Ozan Beye mail atıldı, sistemin uygulanması bekleniyor.Ozan Bey'ler sevk edilen araçların fotoğraflarını yüklemeye başlamıştır.", done: true }] },
+  { id: "kit-57", module: "kalite_guvence", kod: "KIT-2026-057", baslik: "Araç Değişiklik Matrisi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-06", vade: "2026-07-07", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-57-st1", text: "Matris tamamlanıp ilgili kişilere mail atılacaktır.", done: true }, { id: "kit-57-st2", text: "Dönüş olursa toplantı düzenlenecektir.", done: true }] },
+  { id: "kit-58", module: "kalite_guvence", kod: "KIT-2026-058", baslik: "Cam Tedarikçi Bilgileri Raporu", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-08", vade: "2026-07-10", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-58-st1", text: "Cemre Hanım, ilgili kısımları dolduracaktır.", done: true }, { id: "kit-58-st2", text: "Dönüş beklenmektedir.", done: true }] },
+  { id: "kit-59", module: "kalite_guvence", kod: "KIT-2026-059", baslik: "Yapıştırma Testi ( Kaput )", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-10", vade: "2026-07-10", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-59-st1", text: "Yüzey skoçlanarak deneme yapılan ürünler uygunsuzdur.Yüzey pürmüzlenerek denenen ürünlerde yüzeyden ayrılma gözlemlenmedi, yapıştırıcıdan ayrılma gözlemlendi.", done: true }] },
+  { id: "kit-60", module: "kalite_guvence", kod: "KIT-2026-060", baslik: "Balata Değişimi Yapılacaktır.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-13", vade: "", bitisTarihi: "", durum: "iptal", oncelik: "Orta", subtasks: [{ id: "kit-60-st1", text: "Balata değişiminden sonra 500-1000-2000 km kontrolleri ve incelemeleri yapılacaktır.", done: true }] },
+  { id: "kit-61", module: "kalite_guvence", kod: "KIT-2026-061", baslik: "Yolcu camlarının contası ölçülecektir.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-13", vade: "2026-07-13", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-61-st1", text: "Yolcu camlarının shore değerleri kontrol edilecektir.", done: true }, { id: "kit-61-st2", text: "Conta 75 shore gelmektedir.Tan kauçuk üretim standartında 65 -5 shore olması gerektiği yazıyor. Konu iyileştirme toplantısında konuşulacaktır.", done: true }] },
+  { id: "kit-62", module: "kalite_guvence", kod: "KIT-2026-062", baslik: "İtac Görüşme", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-16", vade: "2026-07-23", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-62-st1", text: "Yerlileştirme projelerimiz kapsamında bazı komponentlerde tedarikçi değişikliğine gidiyoruz. Bu değişikliklerin tip onayına etkilerini değerlendirmek üzere sizinle iş birliği yapmak istiyoruz.Bu doğrultuda; süreç adımları (test aracı hazırlığı, dokümantasyon vb.) ve ücretlendirme detayları (komponent bazlı mı yoksa paket fiyat mı) hakkında bilgi paylaşabilir misiniz?", done: true }, { id: "kit-62-st2", text: "Cemre Hanım mail attı, dönüş beklenmektedir.Cemre Hanım, toplantı için görüşecektir.Toplantı yapılmıştır, detaylarla ilgili Cemre Hanım not paylaşacaktır.", done: true }] },
+  { id: "kit-63", module: "kalite_guvence", kod: "KIT-2026-063", baslik: "Cam Numuneleri Hk.", sorumlu: "Doğukan TOKAYAdem YILMAZZOBAMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-63-st1", text: "Başkent Cam: Numuneler geldi.", done: true }, { id: "kit-63-st2", text: "30.07.2026 Tarihinde denemesi yapılacaktır.Denemesi yapıldı. tedarikçiye mail atıldı.", done: true }] },
+  { id: "kit-64", module: "kalite_guvence", kod: "KIT-2026-064", baslik: "Cam Numuneleri Hk.", sorumlu: "Doğukan TOKAYAdem YILMAZZOBAMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-64-st1", text: "Olimpia Cam: 31.07.2026 Tarihinde denemesi yapılacaktır.", done: true }, { id: "kit-64-st2", text: "Deneme bekliyor.", done: true }] },
+  { id: "kit-65", module: "kalite_guvence", kod: "KIT-2026-065", baslik: "Tedarikçi Yönetimi Dokümanlarının Kurulması", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-20", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-65-st1", text: "Hem mevcut tedarikçilerle yaşanan süreçlerde aksaklıkları önlemek hem de yeni yerli tedarikçilerden alım yapmadan önce sistemi standart hale getirmek", done: true }, { id: "kit-65-st2", text: "Tedarikçi El Kitabı ( Tamamlandı 29.07.2026 )", done: true }] },
+  { id: "kit-66", module: "kalite_guvence", kod: "KIT-2026-066", baslik: "2 Adet tablet siparişi açılacaktır.", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-22", vade: "2026-07-31", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-66-st1", text: "Ozan Beyle birlikte tablet siparişi girilecektir.", done: true }] },
+  { id: "kit-67", module: "kalite_guvence", kod: "KIT-2026-067", baslik: "Henkel Müşteri Ziyaretleri / Araç Yorumları", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-23", vade: "2026-07-23", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-67-st1", text: "Pazarlama ve ilgili ekiplerle paylaşılacaktır.", done: true }] },
+  { id: "kit-68", module: "kalite_guvence", kod: "KIT-2026-068", baslik: "COP Denetimi Hazırlıkları", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-07-29", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-68-st1", text: "Furkan Bey'den gelen soru listesine göre çalışmalar yapılacaktır.", done: true }, { id: "kit-68-st2", text: "Soru listesi çıkarıldı. Çalışma planı yapılacaktır.Giriş Kalite Kontrol ProsedürüGiriş Kalite Kontrol FormuProses Kontrol ProsedürüProses Kontrol Formu Final Kontrol ProsedürüFinal Kontrol FormuDepolama ProsedürüSevkiyat Prosedürü", done: true }] },
+  { id: "kit-69", module: "kalite_guvence", kod: "KIT-2026-069", baslik: "Karea COP Test planlaması ve teklif isteği", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-69-st1", text: "Teklif bekliyoruz.", done: true }] },
+  { id: "kit-70", module: "kalite_guvence", kod: "KIT-2026-070", baslik: "Test Aracı Üretimi", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-70-st1", text: "Test süreci için araç üretimi yapılacaktır.", done: true }, { id: "kit-70-st2", text: "120 Numaralı araç test için üretilmiştir.", done: true }] },
+  { id: "kit-71", module: "kalite_guvence", kod: "KIT-2026-071", baslik: "Hurda Yönetim Süreci", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-71-st1", text: "Hurda ürünler için karantina alanı belirlenecektir.Hurda ürünlerin ayrıştırılması belirlenecektir.", done: true }] },
+  { id: "kit-72", module: "kalite_guvence", kod: "KIT-2026-072", baslik: "Kalibrasyon Takip Listesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-72-st1", text: "Karea bünyesindeki tüm aletler listeye eklenecektir ve kalibrasyona gönderilecektir.", done: true }, { id: "kit-72-st2", text: "Kalibrasyon talimatı yazılacaktır.Doğrulama formu yazılacaktır.", done: true }] },
+  { id: "kit-73", module: "kalite_guvence", kod: "KIT-2026-073", baslik: "Mühendislik Değişiklik Yönetimi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-11", vade: "2026-08-14", bitisTarihi: "2026-08-13", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-73-st1", text: "Mühendislik değişiklik formlarının takibinin yapılacağı genel bir excel yapacağız.", done: true }] },
+  { id: "kit-74", module: "kalite_guvence", kod: "KIT-2026-074", baslik: "Uygunluk Belgesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-11", vade: "2026-08-14", bitisTarihi: "2026-08-13", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-74-st1", text: "İlyas Bey: Şasi numaralarına göre açılan klasörlere uygunluk belgelerinin eksiksiz yüklendiğini kontrol et.Birçim Hanım: Devir öncesi araçlara ait evrakların durumunu teyit et, gerekiyorsa eksik belgelerin yüklenmesine destek ol.Kontrol (14.08.2026 Cuma): Tüm şasilerin belgelerinin klasörlerde hazır olduğunu doğrula.", done: true }] },
+  { id: "kit-75", module: "kalite_guvence", kod: "KIT-2026-075", baslik: "Denetim Eksiklikleri", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "devam", oncelik: "Orta", subtasks: [{ id: "kit-75-st1", text: "Giriş Kalite Kontrol Kayıtları dosyasının daha kalabalıklaşması iyi olacaktır. Orkun + Sennur / Abdurrahman ile görüşülebilir, bilgi içeriği için.Mal Kabul girdi formu. Batarya checklistleri örnek olarak gösterilebilir. Ayrıca Emark olan ürünlere dair emark kontrol formu oluşturulabilir: Lastik, aydınlatmalar, korna, aynalar, emniyet kemeri, camlar, kedigözü.Orkun'un tedarikçilerden final kontrol raporlarını istemesi. (Cemre)8.3.2 Hangi ekipmanların hangi periyotlarda bakım yapılması. Kahan'la görüşülecek. Ekipman listesi var mı?8.3.5 EOL'daki testlerin sonuç değerlerinin oradaki bilgisayardan çekilmesi ve anlamlı bir grafik oluşturması. Sapmaların yönetimi için de ekip toplantısı yapılarak tekil konu sahibi belirlenir. Ömer - Hasan Basri8.3.7 - COP denetim günü etraftaki petlas'ları saklayıp haida'ları getirelim - en bariz komponent o olduğu için. Daha fazla hangi komponent göze çarpabilir? 8.3.8 - Şasi / motor / batarya dışında seri no takibi hangi komponentlerin olmalı? 3in1 ya da VCU? Gökhan ve Furkan'larla tartışalım.8.3.9 - Emarklı ürünlerin soft ve hard emark işaretlemelerinin doğruluğu kontrolü için kontrol formu oluştur. (Cemre)8.3.10 - COC belgelerini tedarikçilerden isteyelim. (Orkun + Cemre)", done: true }] },
+  { id: "kit-76", module: "kalite_guvence", kod: "KIT-2026-076", baslik: "Talimat Düzenlemesi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-17", vade: "2026-08-17", bitisTarihi: "2026-08-17", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-76-st1", text: "Gökhan ve Orkun Bey'den gelen talimatları düzenleyip sisteme ekleyeceğiz.", done: true }] },
+  { id: "kit-77", module: "kalite_guvence", kod: "KIT-2026-077", baslik: "İSG Dolabı ve Malzemeler", sorumlu: "Burak KIZMAZ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-77-st1", text: "İSG Dolabı ve koruyucu ekipmanlar alınarak gelen kişilere sunulması gerekmektedir.", done: true }] },
+  { id: "kit-78", module: "kalite_guvence", kod: "KIT-2026-078", baslik: "EMC Test Labarotuvar Seçimi", sorumlu: "Cemre ABLAYRefik DİRİ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-78-st1", text: "Refik Bey'den dönüş beklenmektedir.", done: true }] },
+  { id: "kit-79", module: "kalite_guvence", kod: "KIT-2026-079", baslik: "Tavan Sökmeden Tamir Yönteminin Belirlenmesi", sorumlu: "MühendislikMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-21", vade: "2026-08-21", bitisTarihi: "2026-08-21", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-79-st1", text: "Tamir yöntemi sabitlenecektir.", done: true }] },
+  { id: "kit-80", module: "kalite_guvence", kod: "KIT-2026-080", baslik: "IMDS Sisteminin oluşturulması", sorumlu: "Cemre ABLAYMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [] },
+  { id: "kit-81", module: "kalite_guvence", kod: "KIT-2026-081", baslik: "Uyarı Panosu", sorumlu: "MühendislikMuharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "", vade: "", bitisTarihi: "", durum: "beklemede", oncelik: "Orta", subtasks: [{ id: "kit-81-st1", text: "Benim genel bir önerim olacak. Araçlarla fiziki teması olan herkes, yüzük,kolye,künye,saat, kalem, kemer,kemer tokası, düğme gibi malzemelerden arınmış olmalı.( Talimat belki de vardır. )", done: true }] },
+  { id: "kit-82", module: "kalite_guvence", kod: "KIT-2026-082", baslik: "Araç İzlenebilirlik Sistemi", sorumlu: "Muharrem DELİKTAŞ", gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: "2026-08-12", vade: "2026-08-21", bitisTarihi: "2026-08-21", durum: "tamam", oncelik: "Orta", subtasks: [{ id: "kit-82-st1", text: "Araçlara ait dosyaların düzenlenmesi,Batarya, motor formlarının sisteme işlenmesi", done: true }] },
+];
+
+const INITIAL_TASKS = KIT_TASKS;
 
 const INITIAL_TODOS = [];
 
@@ -65,65 +163,63 @@ const INITIAL_CHATS = [
 const INITIAL_REPORTS = [
   {
     id: "rpt-2026-08-22",
+    seq: 34,
+    baslik: "Gün Sonu Kalite Kontrol ve Araç Durum Raporu",
     tarih: "2026-08-22",
     hazirlayan: "Kalite Güvence Yönetimi (K-QN)",
     bolum: "Şube & Depo Takip",
-    subeHattan: [
-      { id: uid(), no: "141", renk: "-", detay: "Lifte alındı.", durum: "Liftte / İşlemde" },
-      { id: uid(), no: "146", renk: "Yeşil", detay: "Açık maddeler tamamlandı, vakum pompası sorunu giderildi. Sadece sürüş testi kaldı.", durum: "Sürüş Bekliyor" },
-      { id: uid(), no: "148", renk: "-", detay: "Şarj testi OK. Sürüş testi yapılacak, görsel kusurlar gideriliyor.", durum: "Sürüş Bekliyor" },
-      { id: uid(), no: "150", renk: "-", detay: "Şarj testine girdi.", durum: "Şarj Testinde" }
-    ],
-    depodaki: [
-      { id: uid(), no: "144", testAkis: "Sızdırmazlık OK ➔ EE OK", detay: "Bagaj iç sağ üst plastik deforme (derin çizik). Arka bagaj logo takıldı. EE testi yapıldı, final kontrol yapılacak.", asama: "Final Kontrol Bekliyor" },
-      { id: uid(), no: "135", testAkis: "Sürüş OK ➔ Sızdırmazlık OK", detay: "Ön logo takıldı. Sızdırmazlık testi OK. EE testi bekleniyor.", asama: "EE Testi Bekliyor" },
-      { id: uid(), no: "136", testAkis: "Sürüş OK ➔ Sızdırmazlık OK", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", asama: "EE Testi Bekliyor" },
-      { id: uid(), no: "137", testAkis: "Sürüş OK ➔ Sızdırmazlık OK", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", asama: "EE Testi Bekliyor" },
-      { id: uid(), no: "138", testAkis: "Sürüş OK ➔ Sızdırmazlık NOK", detay: "Bagaj kilit su kaçağı devam ediyor. Sağ kapı üst iç tavan su kaçağı tespit edildi. Sealler işlemleri yapıldı, sızdırmazlık testi yapılacak.", asama: "Sızdırmazlık Bekliyor" },
-      { id: uid(), no: "145", testAkis: "Sürüş OK ➔ Sızdırmazlık OK", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", asama: "EE Testi Bekliyor" },
-      { id: uid(), no: "163", testAkis: "Sürüş OK ➔ Sızdırmazlık OK", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", asama: "EE Testi Bekliyor" }
-    ],
-    serbestBirakilan: [
-      { id: uid(), no: "133", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "129", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "134", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "124", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "128", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "126", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "143", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "139", tarih: "2026-08-21", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "130", tarih: "2026-08-20", detay: "Tamir işlemleri tamamlandı, final kontrol edildi ve serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "131", tarih: "2026-08-20", detay: "Tamir işlemleri yapıldı, final yapıldı ve serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "118", tarih: "2026-08-20", detay: "Tamir işlemleri tamamlandı, serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "127", tarih: "2026-08-19", detay: "Tamir işlemleri tamamlandı, final kontrol yapıldı ve serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "132", tarih: "2026-08-19", detay: "Kapı kilit tamir edildi, final kontrol yapıldı ve serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "120", tarih: "2026-08-18", detay: "EMC test aracı olarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "122", tarih: "2026-08-18", detay: "Sızdırmazlık testi OK, tüm kontroller tamamlanarak serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "108", tarih: "2026-08-17", detay: "Ön sol çamurluk ve kapı ayarı tamir işlemleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "107", tarih: "2026-08-14", detay: "Harness düzeltildi, E/E & Final kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "121", tarih: "2026-08-14", detay: "Sızdırmazlık ve eksik parçalar tamamlandı, serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "123", tarih: "2026-08-14", detay: "Sızdırmazlık, E/E Check ve Final kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "125", tarih: "2026-08-14", detay: "Sızdırmazlık, trim ayarları, modül ve Final kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "110", tarih: "2026-08-12", detay: "Sızdırmazlık testi OK, final kontrol edildi, olumsuzluk yok.", durum: "Serbest (OK)" },
-      { id: uid(), no: "117", tarih: "2026-08-12", detay: "Ön tampon ve cam açıklık işlemleri yapıldı, final kontrol OK.", durum: "Serbest (OK)" },
-      { id: uid(), no: "119", tarih: "2026-08-12", detay: "Sızdırmazlık testi OK, final kontrol yapıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "106", tarih: "2026-08-11", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "116", tarih: "2026-08-11", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı. Depoya giriş/park yapıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "111", tarih: "2026-08-10", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "112", tarih: "2026-08-10", detay: "Sürüş, sızdırmazlık ve E/E Check kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "113", tarih: "2026-08-10", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "114", tarih: "2026-08-10", detay: "Radyatör değişimi, sızdırmazlık ve E/E Check tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "115", tarih: "2026-08-10", detay: "Sızdırmazlık, kaput montajı ve E/E Check kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "098", tarih: "2026-08-07", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "130", tarih: "2026-08-07", detay: "Şenol Bey tarafından şartlı onay verildi ve serbest bırakıldı.", durum: "Serbest (Şartlı OK)" },
-      { id: uid(), no: "104", tarih: "2026-08-07", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "109", tarih: "2026-08-06", detay: "Fren körüğü kaynak kaçağı giderildi, EE Check tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "102 (eski 108)", tarih: "2026-08-07", detay: "Şenol Bey şartlı onay verildi ve serbest bırakıldı.", durum: "Serbest (Şartlı OK)" },
-      { id: uid(), no: "103", tarih: "2026-08-04", detay: "Spoiler yapıştırma, sızdırmazlık ve EE Check kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "097", tarih: "2026-08-03", detay: "Sol ayna değişimi yapıldı. Ton farkı durumu onaylandı.", durum: "Serbest (Şartlı OK)" },
-      { id: uid(), no: "091", tarih: "2026-08-01", detay: "Sızdırmazlık ve EE Check kontrolleri tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "096", tarih: "2026-08-01", detay: "Final yapıldı, EPS ayarı, silecek ses ve fıskiye ayarları tamamlandı.", durum: "Serbest (OK)" },
-      { id: uid(), no: "095", tarih: "2026-08-01", detay: "Tüm kalite ve test kontrolleri tamamlandı, serbest bırakıldı.", durum: "Serbest (OK)" }
+    araclar: [
+      { id: "veh-1", no: "141", konum: "fabrika1", asama: "Lift", detay: "Lifte alındı.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-2", no: "146", konum: "fabrika1", asama: "Sürüş Testi", detay: "Açık maddeler tamamlandı, vakum pompası sorunu giderildi. Sadece sürüş testi kaldı.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-3", no: "148", konum: "fabrika1", asama: "Sürüş Testi", detay: "Şarj testi OK. Sürüş testi yapılacak, görsel kusurlar gideriliyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-4", no: "150", konum: "fabrika1", asama: "Şarj Testi", detay: "Şarj testine girdi.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-5", no: "144", konum: "depo", asama: "Final Kontrol", detay: "Bagaj iç sağ üst plastik deforme (derin çizik). Arka bagaj logo takıldı. EE testi yapıldı, final kontrol yapılacak.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-6", no: "135", konum: "depo", asama: "Elektrik Kontrol", detay: "Ön logo takıldı. Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-7", no: "136", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-8", no: "137", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-9", no: "138", konum: "depo", asama: "Sızdırmazlık Testi", detay: "Bagaj kilit su kaçağı devam ediyor. Sağ kapı üst iç tavan su kaçağı tespit edildi. Sealler işlemleri yapıldı, sızdırmazlık testi yapılacak.", tarih: "2026-08-22", reworklar: [{ id: "rw-9", text: "Su kaçağı devam ediyor, sealler uygulandı.", tarih: "2026-08-22" }] },
+      { id: "veh-10", no: "145", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-11", no: "163", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-12", no: "133", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-13", no: "129", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-14", no: "134", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-15", no: "124", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-16", no: "128", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-17", no: "126", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-18", no: "143", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-19", no: "139", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh-20", no: "130", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, final kontrol edildi ve serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh-21", no: "131", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri yapıldı, final yapıldı ve serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh-22", no: "118", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh-23", no: "127", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, final kontrol yapıldı ve serbest bırakıldı.", tarih: "2026-08-19", reworklar: [] },
+      { id: "veh-24", no: "132", konum: "depo", asama: "Serbestlik", detay: "Kapı kilit tamir edildi, final kontrol yapıldı ve serbest bırakıldı.", tarih: "2026-08-19", reworklar: [] },
+      { id: "veh-25", no: "120", konum: "depo", asama: "Serbestlik", detay: "EMC test aracı olarak serbest bırakıldı.", tarih: "2026-08-18", reworklar: [] },
+      { id: "veh-26", no: "122", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, tüm kontroller tamamlanarak serbest bırakıldı.", tarih: "2026-08-18", reworklar: [] },
+      { id: "veh-27", no: "108", konum: "depo", asama: "Serbestlik", detay: "Ön sol çamurluk ve kapı ayarı tamir işlemleri tamamlandı.", tarih: "2026-08-17", reworklar: [] },
+      { id: "veh-28", no: "107", konum: "depo", asama: "Serbestlik", detay: "Harness düzeltildi, E/E & Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh-29", no: "121", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık ve eksik parçalar tamamlandı, serbest bırakıldı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh-30", no: "123", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, E/E Check ve Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh-31", no: "125", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, trim ayarları, modül ve Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh-32", no: "110", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, final kontrol edildi, olumsuzluk yok.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh-33", no: "117", konum: "depo", asama: "Serbestlik", detay: "Ön tampon ve cam açıklık işlemleri yapıldı, final kontrol OK.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh-34", no: "119", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, final kontrol yapıldı.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh-35", no: "106", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı.", tarih: "2026-08-11", reworklar: [] },
+      { id: "veh-36", no: "116", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı. Depoya giriş/park yapıldı.", tarih: "2026-08-11", reworklar: [] },
+      { id: "veh-37", no: "111", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh-38", no: "112", konum: "depo", asama: "Serbestlik", detay: "Sürüş, sızdırmazlık ve E/E Check kontrolleri tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh-39", no: "113", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh-40", no: "114", konum: "depo", asama: "Serbestlik", detay: "Radyatör değişimi, sızdırmazlık ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh-41", no: "115", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, kaput montajı ve E/E Check kontrolleri tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh-42", no: "098", konum: "depo", asama: "Serbestlik", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh-43", no: "130", konum: "depo", asama: "Serbestlik", detay: "Şenol Bey tarafından şartlı onay verildi ve serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh-44", no: "104", konum: "depo", asama: "Serbestlik", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh-45", no: "109", konum: "depo", asama: "Serbestlik", detay: "Fren körüğü kaynak kaçağı giderildi, EE Check tamamlandı.", tarih: "2026-08-06", reworklar: [] },
+      { id: "veh-46", no: "102 (eski 108)", konum: "depo", asama: "Serbestlik", detay: "Şenol Bey şartlı onay verildi ve serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh-47", no: "103", konum: "depo", asama: "Serbestlik", detay: "Spoiler yapıştırma, sızdırmazlık ve EE Check kontrolleri tamamlandı.", tarih: "2026-08-04", reworklar: [] },
+      { id: "veh-48", no: "097", konum: "depo", asama: "Serbestlik", detay: "Sol ayna değişimi yapıldı. Ton farkı durumu onaylandı.", tarih: "2026-08-03", reworklar: [] },
+      { id: "veh-49", no: "091", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık ve EE Check kontrolleri tamamlandı.", tarih: "2026-08-01", reworklar: [] },
+      { id: "veh-50", no: "096", konum: "depo", asama: "Serbestlik", detay: "Final yapıldı, EPS ayarı, silecek ses ve fıskiye ayarları tamamlandı.", tarih: "2026-08-01", reworklar: [] },
+      { id: "veh-51", no: "095", konum: "depo", asama: "Serbestlik", detay: "Tüm kalite ve test kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-01", reworklar: [] },
     ]
   }
 ];
@@ -357,13 +453,15 @@ export default function App() {
       <header style={styles.header} className="no-print">
         <div style={styles.brand}>
           <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Dva • Kalite OS</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
+          <div><div style={styles.brandName}>Karea Asistan</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
         </div>
 
         <nav style={styles.navTabs}>
           <button style={{ ...styles.navTab, ...(activeModule === "dashboard" ? styles.navTabActive : {}) }} onClick={() => { setActiveModule("dashboard"); setDashboardFilter("all"); }}><LayoutDashboard size={15} color="#F59E0B" /><span>Dashboard</span></button>
           <button style={{ ...styles.navTab, ...(activeModule === "todo" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("todo")}><ListTodo size={15} color="#F59E0B" /><span>To-Do List</span></button>
-          <button style={{ ...styles.navTab, ...(activeModule === "raporlar" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("raporlar")}><FileSpreadsheet size={15} color="#10B981" /><span>Raporlar</span></button>
+          {(currentUser.role === "admin" || currentUser.canViewReports) && (
+            <button style={{ ...styles.navTab, ...(activeModule === "raporlar" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("raporlar")}><FileSpreadsheet size={15} color="#10B981" /><span>Araç Akış Takibi</span></button>
+          )}
           {modules.map((m) => {
             const Icon = MODULE_META[m.id]?.icon || ShieldCheck;
             const modColor = MODULE_META[m.id]?.color || "#94A3B8";
@@ -397,11 +495,11 @@ export default function App() {
 
       <main style={styles.mainContent}>
         {activeModule === "dashboard" ? (
-          <DashboardView tasks={tasks} modules={modules} currentUser={currentUser} dashboardFilter={dashboardFilter} setDashboardFilter={setDashboardFilter} onOpenDetail={setSelectedTask} onNavigateModule={setActiveModule} />
+          <DashboardView tasks={tasks} modules={modules} reports={reports} currentUser={currentUser} dashboardFilter={dashboardFilter} setDashboardFilter={setDashboardFilter} onOpenDetail={setSelectedTask} onNavigateModule={setActiveModule} />
         ) : activeModule === "todo" ? (
           <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
         ) : activeModule === "raporlar" ? (
-          <ReportsView reports={reports} setReports={setReports} currentUser={currentUser} />
+          (currentUser.role === "admin" || currentUser.canViewReports) ? <ReportsView reports={reports} setReports={setReports} currentUser={currentUser} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
         ) : activeModule === "detayli_rapor" ? (
           <DetailedReportView tasks={tasks} usersList={usersList} modules={modules} />
         ) : activeModule === "admin_panel" ? (
@@ -666,13 +764,15 @@ function TodoListView({ todos, setTodos, currentUser }) {
 }
 
 // --- DİĞER EKRANLAR (DASHBOARD, KANBAN, RAPOR, ADMIN) ---
-function DashboardView({ tasks, modules, currentUser, dashboardFilter, setDashboardFilter, onOpenDetail, onNavigateModule }) {
+function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, setDashboardFilter, onOpenDetail, onNavigateModule }) {
   const myTasks = tasks.filter(t => t.sorumlu === currentUser.name);
   const filtered = myTasks.filter(t => dashboardFilter === "aktif" ? t.durum !== "tamam" : dashboardFilter === "tamamlanan" ? t.durum === "tamam" : true);
   const today = todayStr();
   const overdueCount = myTasks.filter(t => t.durum !== "tamam" && t.vade && t.vade < today).length;
   const teamActive = tasks.filter(t => t.durum !== "tamam").length;
   const teamDone = tasks.filter(t => t.durum === "tamam").length;
+  const canSeeReports = currentUser.role === "admin" || currentUser.canViewReports;
+  const latestReport = canSeeReports && reports && reports.length > 0 ? [...reports].sort((a, b) => (a.tarih < b.tarih ? 1 : -1))[0] : null;
 
   return (
     <div style={styles.viewContainer} id="print-area">
@@ -680,12 +780,33 @@ function DashboardView({ tasks, modules, currentUser, dashboardFilter, setDashbo
         <div><h1 style={styles.viewTitle}>Dashboard</h1><p style={styles.viewSub}>Hoş geldiniz, {currentUser.name}. — {fmtDate(today)}</p></div>
         <button style={styles.printBtn} className="no-print" onClick={() => window.print()}><Printer size={15} /> Yazdır</button>
       </div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} className="no-print">
+        <button style={styles.quickActionBtn} onClick={() => onNavigateModule("todo")}><ListTodo size={13} /> To-Do Ekle</button>
+        {canSeeReports && <button style={styles.quickActionBtn} onClick={() => onNavigateModule("raporlar")}><FileSpreadsheet size={13} /> Araç Akış Takibi</button>}
+        <button style={styles.quickActionBtn} onClick={() => onNavigateModule("detayli_rapor")}><FileText size={13} /> Detaylı Rapor</button>
+      </div>
+
       <div style={styles.dashboardCardGrid}>
         <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8", cursor: "pointer" }} onClick={() => setDashboardFilter("all")}><div style={styles.dashCardTitle}>Toplam İşim</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
         <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B", cursor: "pointer" }} onClick={() => setDashboardFilter("aktif")}><div style={styles.dashCardTitle}>Aktif İşlerim</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum !== "tamam").length}</div></div>
         <div style={{ ...styles.dashCard, borderLeftColor: "#10B981", cursor: "pointer" }} onClick={() => setDashboardFilter("tamamlanan")}><div style={styles.dashCardTitle}>Tamamladığım</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum === "tamam").length}</div></div>
         <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Geciken İşlerim</div><div style={styles.dashCardValue}>{overdueCount}</div></div>
       </div>
+
+      {latestReport && (
+        <div style={styles.yearEndTableCard} onClick={() => onNavigateModule("raporlar")} className="clickable-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B" }}>Son Araç Akışı Raporu — {fmtDate(latestReport.tarih)}</h3>
+            <ArrowRight size={16} color="#94A3B8" />
+          </div>
+          <div style={{ display: "flex", gap: 20, marginTop: 10, fontSize: 12 }}>
+            <span style={{ color: "#38BDF8" }}>{latestReport.araclar.filter(a => a.konum === "fabrika1").length} Fabrika 1</span>
+            <span style={{ color: "#F59E0B" }}>{latestReport.araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length} Depo</span>
+            <span style={{ color: "#10B981" }}>{latestReport.araclar.filter(a => a.asama === "Serbestlik").length} Serbest</span>
+          </div>
+        </div>
+      )}
 
       <div style={styles.yearEndTableCard}>
         <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Ekip Geneli Durum</h3>
@@ -713,9 +834,10 @@ function DashboardView({ tasks, modules, currentUser, dashboardFilter, setDashbo
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        {filtered.length === 0 && <div style={{ color: "#64748B", fontSize: 12 }}>Bu filtrede iş yok.</div>}
         {filtered.map(t => (
           <div key={t.id} style={styles.personalTaskCard} onClick={() => onOpenDetail(t)}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={styles.taskCodeBadge}>{t.kod}</span><span style={{ fontSize: 10, color: "#F59E0B" }}>{t.durum.toUpperCase()}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={styles.taskCodeBadge}>{t.kod}</span><span style={{ fontSize: 10, color: "#F59E0B" }}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</span></div>
             <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{t.baslik}</div>
           </div>
         ))}
@@ -823,8 +945,10 @@ function ReportsView({ reports, setReports, currentUser }) {
   const sorted = [...reports].sort((a, b) => (a.tarih < b.tarih ? 1 : -1));
   const selected = reports.find(r => r.id === selectedId);
 
+  const nextSeq = () => reports.length ? Math.max(...reports.map(r => r.seq || 0)) + 1 : 1;
+
   const createReport = (form) => {
-    const newReport = { id: uid(), tarih: form.tarih, hazirlayan: form.hazirlayan, bolum: form.bolum, subeHattan: [], depodaki: [], serbestBirakilan: [] };
+    const newReport = { id: uid(), seq: nextSeq(), baslik: form.baslik, tarih: form.tarih, hazirlayan: form.hazirlayan, bolum: form.bolum, araclar: [] };
     setReports([newReport, ...reports]);
     setSelectedId(newReport.id);
     setShowNew(false);
@@ -840,27 +964,33 @@ function ReportsView({ reports, setReports, currentUser }) {
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Raporlar</h1><p style={styles.viewSub}>Araç durum raporları — herkes yeni rapor ekleyebilir.</p></div>
+        <div><h1 style={styles.viewTitle}>Araç Akış Takibi</h1><p style={styles.viewSub}>Fabrika 1 ve Depo akışındaki araçlar — herkes yeni rapor ekleyebilir.</p></div>
         <button style={styles.primaryActionBtn} onClick={() => setShowNew(true)}><Plus size={16} /> Yeni Rapor</button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: selected ? "300px 1fr" : "1fr", gap: 20 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: selected ? "75vh" : "none", overflowY: selected ? "auto" : "visible" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: selected ? "80vh" : "none", overflowY: selected ? "auto" : "visible" }}>
           {sorted.length === 0 && <div style={{ color: "#64748B", textAlign: "center", padding: 30 }}>Henüz rapor eklenmedi.</div>}
-          {sorted.map(r => (
-            <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} onClick={() => setSelectedId(r.id)}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtDate(r.tarih)}</span>
-                {canDelete(r) && <Trash2 size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} />}
+          {sorted.map(r => {
+            const fCount = r.araclar.filter(a => a.konum === "fabrika1").length;
+            const dCount = r.araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
+            const sCount = r.araclar.filter(a => a.asama === "Serbestlik").length;
+            return (
+              <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} onClick={() => setSelectedId(r.id)}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtDate(r.tarih)}</span>
+                  {canDelete(r) && <Trash2 size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} />}
+                </div>
+                <div style={{ fontSize: 12, color: "#E2E8F0", marginTop: 4, fontWeight: 600 }}>{r.baslik}</div>
+                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{r.hazirlayan} · v{r.seq}</div>
+                <div style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 11 }}>
+                  <span style={{ color: "#38BDF8" }}>{fCount} Fabrika 1</span>
+                  <span style={{ color: "#F59E0B" }}>{dCount} Depo</span>
+                  <span style={{ color: "#10B981" }}>{sCount} Serbest</span>
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{r.hazirlayan}</div>
-              <div style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 11 }}>
-                <span style={{ color: "#38BDF8" }}>{r.subeHattan.length} şube</span>
-                <span style={{ color: "#F59E0B" }}>{r.depodaki.length} depoda</span>
-                <span style={{ color: "#10B981" }}>{r.serbestBirakilan.length} serbest</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {selected && <ReportDetail report={selected} onUpdate={(upd) => setReports(reports.map(r => r.id === upd.id ? upd : r))} onClose={() => setSelectedId(null)} />}
@@ -872,6 +1002,7 @@ function ReportsView({ reports, setReports, currentUser }) {
 }
 
 function NewReportModal({ currentUser, onClose, onCreate }) {
+  const [baslik, setBaslik] = useState("Gün Sonu Kalite Kontrol ve Araç Durum Raporu");
   const [tarih, setTarih] = useState(todayStr());
   const [hazirlayan, setHazirlayan] = useState(currentUser.name);
   const [bolum, setBolum] = useState("Şube & Depo Takip");
@@ -880,12 +1011,13 @@ function NewReportModal({ currentUser, onClose, onCreate }) {
       <div style={styles.createModalContent}>
         <h2 style={styles.formTitle}>Yeni Rapor</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
+          <div><label style={styles.inputLabel}>Rapor Adı</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} /></div>
           <div><label style={styles.inputLabel}>Tarih</label><input type="date" style={styles.selectInput} value={tarih} onChange={e => setTarih(e.target.value)} /></div>
           <div><label style={styles.inputLabel}>Hazırlayan</label><input style={styles.mainInput} value={hazirlayan} onChange={e => setHazirlayan(e.target.value)} /></div>
           <div><label style={styles.inputLabel}>Bölüm</label><input style={styles.mainInput} value={bolum} onChange={e => setBolum(e.target.value)} /></div>
           <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
             <button style={styles.ghostBtn} onClick={onClose}>Vazgeç</button>
-            <button style={styles.primaryActionBtn} onClick={() => onCreate({ tarih, hazirlayan, bolum })}>Oluştur</button>
+            <button style={styles.primaryActionBtn} onClick={() => onCreate({ baslik, tarih, hazirlayan, bolum })}>Oluştur</button>
           </div>
         </div>
       </div>
@@ -894,106 +1026,218 @@ function NewReportModal({ currentUser, onClose, onCreate }) {
 }
 
 function ReportDetail({ report, onUpdate, onClose }) {
-  const [subeForm, setSubeForm] = useState({ no: "", renk: "", detay: "", durum: "" });
-  const [depoForm, setDepoForm] = useState({ no: "", testAkis: "", detay: "", asama: "" });
-  const [serbestForm, setSerbestForm] = useState({ no: "", tarih: todayStr(), detay: "", durum: "Serbest (OK)" });
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(report.baslik);
+  const [addingTo, setAddingTo] = useState(null); // "fabrika1" | "depo" | null
+  const [vehForm, setVehForm] = useState({ no: "", asama: "", detay: "", tarih: todayStr() });
+  const [editingVehId, setEditingVehId] = useState(null);
+  const [reworkFormFor, setReworkFormFor] = useState(null);
+  const [reworkText, setReworkText] = useState("");
 
-  const addRow = (key, form, setForm, resetTo) => {
-    if (!form.no.trim()) return;
-    onUpdate({ ...report, [key]: [...report[key], { id: uid(), ...form }] });
-    setForm(resetTo);
+  const fabrikaAraclar = report.araclar.filter(a => a.konum === "fabrika1");
+  const depoAraclar = report.araclar.filter(a => a.konum === "depo");
+  const serbestCount = report.araclar.filter(a => a.asama === "Serbestlik").length;
+
+  const saveTitle = () => {
+    onUpdate({ ...report, baslik: titleDraft.trim() || report.baslik });
+    setEditingTitle(false);
   };
-  const removeRow = (key, id) => onUpdate({ ...report, [key]: report[key].filter(r => r.id !== id) });
+
+  const updateMeta = (patch) => onUpdate({ ...report, ...patch });
+
+  const openAddForm = (konum) => {
+    const stages = konum === "fabrika1" ? FABRIKA1_STAGES : DEPO_STAGES;
+    setVehForm({ no: "", asama: stages[0], detay: "", tarih: todayStr() });
+    setAddingTo(konum);
+    setEditingVehId(null);
+  };
+
+  const addVehicle = () => {
+    if (!vehForm.no.trim()) return;
+    const v = { id: uid(), no: vehForm.no.trim(), konum: addingTo, asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih, reworklar: [] };
+    onUpdate({ ...report, araclar: [...report.araclar, v] });
+    setAddingTo(null);
+  };
+
+  const openEditForm = (v) => {
+    setVehForm({ no: v.no, asama: v.asama, detay: v.detay, tarih: v.tarih });
+    setEditingVehId(v.id);
+    setAddingTo(null);
+  };
+
+  const saveEdit = () => {
+    onUpdate({ ...report, araclar: report.araclar.map(a => a.id === editingVehId ? { ...a, no: vehForm.no.trim(), asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih } : a) });
+    setEditingVehId(null);
+  };
+
+  const removeVehicle = (id) => onUpdate({ ...report, araclar: report.araclar.filter(a => a.id !== id) });
+
+  const addRework = (vehId) => {
+    if (!reworkText.trim()) return;
+    onUpdate({ ...report, araclar: report.araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
+    setReworkText("");
+    setReworkFormFor(null);
+  };
+
+  const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: report.araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
+
+  const exportPdf = () => {
+    const prevTitle = document.title;
+    document.title = `${report.tarih}_Kalite_Guvence_Gun_Ozet_Raporu_v${report.seq}`;
+    window.print();
+    setTimeout(() => { document.title = prevTitle; }, 800);
+  };
 
   return (
     <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }} id="print-area">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: "#F59E0B" }}>{fmtDate(report.tarih)} — {report.bolum}</h2>
-          <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>Hazırlayan: {report.hazirlayan}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div style={{ flex: 1 }}>
+          {editingTitle ? (
+            <input autoFocus style={{ ...styles.mainInput, fontSize: 16, fontWeight: 800 }} value={titleDraft} onChange={e => setTitleDraft(e.target.value)} onBlur={saveTitle} onKeyDown={e => e.key === "Enter" && saveTitle()} />
+          ) : (
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#F59E0B", cursor: "pointer" }} onClick={() => { setTitleDraft(report.baslik); setEditingTitle(true); }} title="Düzenlemek için tıklayın">{report.baslik} <Edit3 size={13} className="no-print" style={{ opacity: 0.6 }} /></h2>
+          )}
+          <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }} className="no-print">
+            <span style={{ fontSize: 11, color: "#94A3B8" }}>Tarih: <input type="date" style={{ ...styles.selectInput, padding: "3px 6px", fontSize: 11, width: 130 }} value={report.tarih} onChange={e => updateMeta({ tarih: e.target.value })} /></span>
+            <span style={{ fontSize: 11, color: "#94A3B8" }}>Hazırlayan: <input style={{ ...styles.selectInput, padding: "3px 6px", fontSize: 11, width: 160 }} value={report.hazirlayan} onChange={e => updateMeta({ hazirlayan: e.target.value })} /></span>
+            <span style={{ fontSize: 11, color: "#94A3B8" }}>Bölüm: <input style={{ ...styles.selectInput, padding: "3px 6px", fontSize: 11, width: 140 }} value={report.bolum} onChange={e => updateMeta({ bolum: e.target.value })} /></span>
+          </div>
+          <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>{fmtDate(report.tarih)} — v{report.seq}</div>
         </div>
         <div style={{ display: "flex", gap: 8 }} className="no-print">
-          <button style={styles.printBtn} onClick={() => window.print()}><Printer size={14} /> Yazdır</button>
+          <button style={styles.printBtn} onClick={exportPdf}><Printer size={14} /> PDF Olarak İndir</button>
           <button style={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
       </div>
 
-      <ReportSection title={`Şube / Hattan İnenler (${report.subeHattan.length})`} color="#38BDF8">
-        {report.subeHattan.map(r => (
-          <div key={r.id} style={styles.reportRow}>
-            <span style={styles.reportRowNo}>#{r.no}</span>
-            <span style={{ flex: 1 }}>{r.detay}</span>
-            <span style={{ fontSize: 11, color: "#F59E0B", whiteSpace: "nowrap" }}>{r.durum}</span>
-            <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} className="no-print" onClick={() => removeRow("subeHattan", r.id)} />
-          </div>
-        ))}
-        <div style={styles.reportAddForm} className="no-print">
-          <input style={{ ...styles.mainInput, maxWidth: 80 }} placeholder="Araç No" value={subeForm.no} onChange={e => setSubeForm(f => ({ ...f, no: e.target.value }))} />
-          <input style={styles.mainInput} placeholder="Detay" value={subeForm.detay} onChange={e => setSubeForm(f => ({ ...f, detay: e.target.value }))} />
-          <input style={{ ...styles.mainInput, maxWidth: 150 }} placeholder="Durum" value={subeForm.durum} onChange={e => setSubeForm(f => ({ ...f, durum: e.target.value }))} />
-          <button style={styles.addInlineBtn} onClick={() => addRow("subeHattan", subeForm, setSubeForm, { no: "", renk: "", detay: "", durum: "" })}>Ekle</button>
-        </div>
-      </ReportSection>
+      <div style={{ display: "flex", gap: 16, margin: "16px 0", flexWrap: "wrap" }}>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Fabrika 1</div><div style={styles.dashCardValue}>{fabrikaAraclar.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Depo (İşlemde)</div><div style={styles.dashCardValue}>{depoAraclar.length - serbestCount}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Serbest Bırakılan</div><div style={styles.dashCardValue}>{serbestCount}</div></div>
+      </div>
 
-      <ReportSection title={`Depodaki Araçlar (${report.depodaki.length})`} color="#F59E0B">
-        {report.depodaki.map(r => (
-          <div key={r.id} style={styles.reportRow}>
-            <span style={styles.reportRowNo}>#{r.no}</span>
-            <span style={{ fontSize: 11, color: "#94A3B8", whiteSpace: "nowrap" }}>{r.testAkis}</span>
-            <span style={{ flex: 1 }}>{r.detay}</span>
-            <span style={{ fontSize: 11, color: "#F59E0B", whiteSpace: "nowrap" }}>{r.asama}</span>
-            <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} className="no-print" onClick={() => removeRow("depodaki", r.id)} />
-          </div>
-        ))}
-        <div style={styles.reportAddForm} className="no-print">
-          <input style={{ ...styles.mainInput, maxWidth: 80 }} placeholder="Araç No" value={depoForm.no} onChange={e => setDepoForm(f => ({ ...f, no: e.target.value }))} />
-          <input style={{ ...styles.mainInput, maxWidth: 160 }} placeholder="Test Akışı" value={depoForm.testAkis} onChange={e => setDepoForm(f => ({ ...f, testAkis: e.target.value }))} />
-          <input style={styles.mainInput} placeholder="Detay" value={depoForm.detay} onChange={e => setDepoForm(f => ({ ...f, detay: e.target.value }))} />
-          <input style={{ ...styles.mainInput, maxWidth: 150 }} placeholder="Aşama" value={depoForm.asama} onChange={e => setDepoForm(f => ({ ...f, asama: e.target.value }))} />
-          <button style={styles.addInlineBtn} onClick={() => addRow("depodaki", depoForm, setDepoForm, { no: "", testAkis: "", detay: "", asama: "" })}>Ekle</button>
-        </div>
-      </ReportSection>
+      <VehicleLocationSection
+        title="Fabrika 1" color="#38BDF8" konum="fabrika1" stages={FABRIKA1_STAGES}
+        araclar={fabrikaAraclar} addingTo={addingTo} vehForm={vehForm} setVehForm={setVehForm}
+        editingVehId={editingVehId} reworkFormFor={reworkFormFor} setReworkFormFor={setReworkFormFor}
+        reworkText={reworkText} setReworkText={setReworkText}
+        onOpenAdd={() => openAddForm("fabrika1")} onCancelAdd={() => setAddingTo(null)} onAdd={addVehicle}
+        onOpenEdit={openEditForm} onCancelEdit={() => setEditingVehId(null)} onSaveEdit={saveEdit}
+        onRemove={removeVehicle} onAddRework={addRework} onRemoveRework={removeRework}
+      />
 
-      <ReportSection title={`Serbest Bırakılanlar (${report.serbestBirakilan.length})`} color="#10B981">
-        {report.serbestBirakilan.map(r => (
-          <div key={r.id} style={styles.reportRow}>
-            <span style={styles.reportRowNo}>#{r.no}</span>
-            <span style={{ fontSize: 11, color: "#94A3B8", whiteSpace: "nowrap" }}>{fmtDate(r.tarih)}</span>
-            <span style={{ flex: 1 }}>{r.detay}</span>
-            <span style={{ fontSize: 11, color: "#10B981", whiteSpace: "nowrap" }}>{r.durum}</span>
-            <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} className="no-print" onClick={() => removeRow("serbestBirakilan", r.id)} />
-          </div>
-        ))}
-        <div style={styles.reportAddForm} className="no-print">
-          <input style={{ ...styles.mainInput, maxWidth: 80 }} placeholder="Araç No" value={serbestForm.no} onChange={e => setSerbestForm(f => ({ ...f, no: e.target.value }))} />
-          <input type="date" style={{ ...styles.mainInput, maxWidth: 140 }} value={serbestForm.tarih} onChange={e => setSerbestForm(f => ({ ...f, tarih: e.target.value }))} />
-          <input style={styles.mainInput} placeholder="Detay" value={serbestForm.detay} onChange={e => setSerbestForm(f => ({ ...f, detay: e.target.value }))} />
-          <input style={{ ...styles.mainInput, maxWidth: 150 }} placeholder="Durum" value={serbestForm.durum} onChange={e => setSerbestForm(f => ({ ...f, durum: e.target.value }))} />
-          <button style={styles.addInlineBtn} onClick={() => addRow("serbestBirakilan", serbestForm, setSerbestForm, { no: "", tarih: todayStr(), detay: "", durum: "Serbest (OK)" })}>Ekle</button>
-        </div>
-      </ReportSection>
+      <VehicleLocationSection
+        title="Depo" color="#F59E0B" konum="depo" stages={DEPO_STAGES}
+        araclar={depoAraclar} addingTo={addingTo} vehForm={vehForm} setVehForm={setVehForm}
+        editingVehId={editingVehId} reworkFormFor={reworkFormFor} setReworkFormFor={setReworkFormFor}
+        reworkText={reworkText} setReworkText={setReworkText}
+        onOpenAdd={() => openAddForm("depo")} onCancelAdd={() => setAddingTo(null)} onAdd={addVehicle}
+        onOpenEdit={openEditForm} onCancelEdit={() => setEditingVehId(null)} onSaveEdit={saveEdit}
+        onRemove={removeVehicle} onAddRework={addRework} onRemoveRework={removeRework}
+      />
     </div>
   );
 }
 
-function ReportSection({ title, color, children }) {
+function VehicleLocationSection({ title, color, konum, stages, araclar, addingTo, vehForm, setVehForm, editingVehId, reworkFormFor, setReworkFormFor, reworkText, setReworkText, onOpenAdd, onCancelAdd, onAdd, onOpenEdit, onCancelEdit, onSaveEdit, onRemove, onAddRework, onRemoveRework }) {
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color, marginBottom: 8, borderBottom: "1px solid #334155", paddingBottom: 6 }}>{title}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{children}</div>
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #334155", paddingBottom: 6, marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color }}>{title} ({araclar.length})</span>
+        <button style={styles.addChipBtnSolid} className="no-print" onClick={onOpenAdd}><Plus size={12} /> Araç Ekle</button>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {araclar.length === 0 && <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>Bu konumda kayıtlı araç yok.</div>}
+        {araclar.map(v => (
+          editingVehId === v.id ? (
+            <div key={v.id} style={styles.reportAddForm} className="no-print">
+              <input style={{ ...styles.mainInput, maxWidth: 80 }} value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} />
+              <select style={{ ...styles.selectInput, maxWidth: 160 }} value={vehForm.asama} onChange={e => setVehForm(f => ({ ...f, asama: e.target.value }))}>
+                {stages.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input style={styles.mainInput} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
+              <input type="date" style={{ ...styles.mainInput, maxWidth: 140 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
+              <button style={styles.addInlineBtn} onClick={onSaveEdit}>Kaydet</button>
+              <button style={styles.ghostBtn} onClick={onCancelEdit}>Vazgeç</button>
+            </div>
+          ) : (
+            <div key={v.id}>
+              <div style={styles.reportRow}>
+                <span style={styles.reportRowNo}>#{v.no}</span>
+                <span style={{ fontSize: 11, color, whiteSpace: "nowrap", fontWeight: 700 }}>{v.asama}</span>
+                <span style={{ flex: 1 }}>{v.detay}</span>
+                <span style={{ fontSize: 11, color: "#94A3B8", whiteSpace: "nowrap" }}>{fmtDate(v.tarih)}</span>
+                <div className="no-print" style={{ display: "flex", gap: 6 }}>
+                  <Edit2 size={12} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => onOpenEdit(v)} />
+                  <button style={{ ...styles.editIconBtn, fontSize: 10, padding: 0 }} onClick={() => setReworkFormFor(reworkFormFor === v.id ? null : v.id)}>Rework</button>
+                  <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => onRemove(v.id)} />
+                </div>
+              </div>
+              {(v.reworklar || []).length > 0 && (
+                <div style={{ marginLeft: 54, marginTop: 3, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {v.reworklar.map(rw => (
+                    <div key={rw.id} style={{ fontSize: 11, color: "#FCA5A5", display: "flex", gap: 6, alignItems: "center" }}>
+                      🔧 {rw.text} <span style={{ color: "#64748B" }}>({fmtDate(rw.tarih)})</span>
+                      <X size={10} className="no-print" style={{ cursor: "pointer" }} onClick={() => onRemoveRework(v.id, rw.id)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {reworkFormFor === v.id && (
+                <div style={{ marginLeft: 54, marginTop: 4, display: "flex", gap: 6 }} className="no-print">
+                  <input style={{ ...styles.mainInput, fontSize: 11 }} placeholder="Rework / tamir açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
+                  <button style={styles.addInlineBtn} onClick={() => onAddRework(v.id)}>Ekle</button>
+                </div>
+              )}
+            </div>
+          )
+        ))}
+
+        {addingTo === konum && (
+          <div style={styles.reportAddForm} className="no-print">
+            <input style={{ ...styles.mainInput, maxWidth: 80 }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} />
+            <select style={{ ...styles.selectInput, maxWidth: 160 }} value={vehForm.asama} onChange={e => setVehForm(f => ({ ...f, asama: e.target.value }))}>
+              {stages.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input style={styles.mainInput} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
+            <input type="date" style={{ ...styles.mainInput, maxWidth: 140 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
+            <button style={styles.addInlineBtn} onClick={onAdd}>Ekle</button>
+            <button style={styles.ghostBtn} onClick={onCancelAdd}>Vazgeç</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function DetailedReportView({ tasks, modules }) {
   const moduleLabel = (id) => modules.find(m => m.id === id)?.label || id;
+  const [personFilter, setPersonFilter] = useState("hepsi");
+  const [titleQuery, setTitleQuery] = useState("");
+  const people = Array.from(new Set(tasks.map(t => t.sorumlu).filter(Boolean))).sort();
+  const filtered = tasks.filter(t =>
+    (personFilter === "hepsi" || t.sorumlu === personFilter) &&
+    (titleQuery.trim() === "" || t.baslik.toLowerCase().includes(titleQuery.trim().toLowerCase()))
+  );
+
   return (
-    <div style={styles.viewContainer} id="print-area">
+    <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}><h1 style={styles.viewTitle}>Detaylı Rapor</h1><button style={styles.printBtn} className="no-print" onClick={() => window.print()}><Printer size={15} /> Yazdır</button></div>
-      <div style={styles.yearEndTableCard}>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} className="no-print">
+        <select style={{ ...styles.selectInput, maxWidth: 220 }} value={personFilter} onChange={e => setPersonFilter(e.target.value)}>
+          <option value="hepsi">Tüm Kişiler</option>
+          {people.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <input style={{ ...styles.mainInput, maxWidth: 260 }} placeholder="Başlığa göre ara..." value={titleQuery} onChange={e => setTitleQuery(e.target.value)} />
+        <span style={{ fontSize: 11, color: "#94A3B8", alignSelf: "center" }}>{filtered.length} / {tasks.length} kayıt</span>
+      </div>
+
+      <div style={styles.yearEndTableCard} id="print-area">
         <table style={styles.table}>
           <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Modül</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Öncelik</th><th style={styles.th}>Vade</th><th style={styles.th}>Durum</th></tr></thead>
-          <tbody>{tasks.map(t => (<tr key={t.id} style={styles.tr}><td style={styles.td}>{t.kod}</td><td style={styles.tdTitle}>{t.baslik}</td><td style={styles.td}>{moduleLabel(t.module)}</td><td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.oncelik || "—"}</td><td style={styles.td}>{fmtDate(t.vade)}</td><td style={styles.td}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</td></tr>))}</tbody>
+          <tbody>{filtered.map(t => (<tr key={t.id} style={styles.tr}><td style={styles.td}>{t.kod}</td><td style={styles.tdTitle}>{t.baslik}</td><td style={styles.td}>{moduleLabel(t.module)}</td><td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.oncelik || "—"}</td><td style={styles.td}>{fmtDate(t.vade)}</td><td style={styles.td}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</td></tr>))}</tbody>
         </table>
       </div>
     </div>
@@ -1003,9 +1247,34 @@ function DetailedReportView({ tasks, modules }) {
 function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) {
   const [showModal, setShowModal] = useState(false);
   const [editingModules, setEditingModules] = useState(() => Object.fromEntries(modules.map(m => [m.id, m.label])));
+  const [newModuleLabel, setNewModuleLabel] = useState("");
 
   const saveModuleLabel = (id) => {
     setModules(modules.map(m => m.id === id ? { ...m, label: (editingModules[id] || m.label).trim() || m.label } : m));
+  };
+
+  const slugify = (s) => {
+    const map = { ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u", Ç: "c", Ğ: "g", İ: "i", Ö: "o", Ş: "s", Ü: "u" };
+    let out = s.split("").map(ch => map[ch] || ch).join("").toLowerCase();
+    out = out.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return out || "modul";
+  };
+
+  const addModule = () => {
+    const label = newModuleLabel.trim();
+    if (!label) return;
+    let id = slugify(label);
+    let n = 2;
+    while (modules.some(m => m.id === id)) { id = `${slugify(label)}_${n}`; n++; }
+    setModules([...modules, { id, label }]);
+    setNewModuleLabel("");
+  };
+
+  const removeModule = (id) => {
+    if (modules.length <= 1) { window.alert("En az bir modül kalmalı."); return; }
+    if (window.confirm("Bu modülü silmek istediğinize emin misiniz? Modüldeki mevcut görevler silinmez ama nav'dan erişilemez hale gelir.")) {
+      setModules(modules.filter(m => m.id !== id));
+    }
   };
 
   return (
@@ -1013,7 +1282,7 @@ function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) 
       <div style={styles.yearEndHeader}><h1 style={styles.viewTitle}>Admin Paneli</h1><button style={styles.primaryActionBtn} onClick={() => setShowModal(true)}>Kullanıcı Ekle</button></div>
 
       <div style={styles.yearEndTableCard}>
-        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Modül Başlıkları</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Modüller</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {modules.map(m => {
             const Icon = MODULE_META[m.id]?.icon || ShieldCheck;
@@ -1027,16 +1296,21 @@ function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) 
                   onBlur={() => saveModuleLabel(m.id)}
                   onKeyDown={(e) => { if (e.key === "Enter") { saveModuleLabel(m.id); e.currentTarget.blur(); } }}
                 />
+                <Trash2 size={14} color="#EF4444" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => removeModule(m.id)} />
               </div>
             );
           })}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <input style={{ ...styles.mainInput, flex: 1 }} placeholder="Yeni modül adı..." value={newModuleLabel} onChange={(e) => setNewModuleLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addModule()} />
+            <button style={styles.addInlineBtn} onClick={addModule}>+ Ekle</button>
+          </div>
         </div>
       </div>
 
       <div style={styles.yearEndTableCard}>
         <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Üyelik Yönetimi</h3>
         <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Adı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>İşlem</th></tr></thead>
+          <thead><tr><th style={styles.th}>Adı</th><th style={styles.th}>ID</th><th style={styles.th}>Rol</th><th style={styles.th}>Araç Akış Takibi</th><th style={styles.th}>İşlem</th></tr></thead>
           <tbody>
             {usersList.map(u => (
               <tr key={u.id} style={styles.tr}>
@@ -1048,6 +1322,16 @@ function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) 
                     <option value="moderator">Moderatör</option>
                     <option value="admin">Admin</option>
                   </select>
+                </td>
+                <td style={styles.td}>
+                  {u.role === "admin" ? (
+                    <span style={{ fontSize: 11, color: "#5FAE7B" }}>Admin (her zaman görür)</span>
+                  ) : (
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, cursor: "pointer" }}>
+                      <input type="checkbox" checked={!!u.canViewReports} onChange={(e) => setUsersList(usersList.map(x => x.id === u.id ? { ...x, canViewReports: e.target.checked } : x))} />
+                      Görebilir
+                    </label>
+                  )}
                 </td>
                 <td style={styles.td}>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -1074,7 +1358,7 @@ function UserModal({ onClose, onSave }) {
     <div style={styles.modalOverlay}>
       <div style={styles.createModalContent}>
         <h2>Kullanıcı Ekle</h2>
-        <form onSubmit={e => { e.preventDefault(); onSave({ id: uid(), name, username, password, role, status: "approved" }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+        <form onSubmit={e => { e.preventDefault(); onSave({ id: uid(), name, username, password, role, status: "approved", canViewReports: false }); onClose(); }} style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
           <input style={styles.mainInput} placeholder="Ad Soyad" value={name} onChange={e => setName(e.target.value)} required />
           <input style={styles.mainInput} placeholder="Kullanıcı Adı" value={username} onChange={e => setUsername(e.target.value)} required />
           <input style={styles.mainInput} type="password" maxLength={4} placeholder="Şifre" value={password} onChange={e => setPassword(e.target.value)} required />
@@ -1177,7 +1461,7 @@ function LoginScreen({ onLogin, onRegister, error, setError }) {
       <div style={styles.loginCard}>
         <div style={styles.loginHeader}>
           <div style={styles.loginLogo}><ShieldCheck size={36} color="#F59E0B" /></div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, marginTop: 12, color: "#F59E0B" }}>Dva Kalite OS</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginTop: 12, color: "#F59E0B" }}>Karea Asistan</h1>
           <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 6 }}>🔑 İlk giriş şifresi: <b>0000</b></p>
         </div>
         {error && <div style={styles.errorBar}>{error}</div>}
@@ -1233,6 +1517,8 @@ const styles = {
   reportRow: { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#0F172A", borderRadius: 6, fontSize: 12 },
   reportRowNo: { fontFamily: "monospace", fontWeight: 800, color: "#F59E0B", flexShrink: 0, width: 44 },
   reportAddForm: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" },
+  addChipBtnSolid: { display: "flex", alignItems: "center", gap: 4, background: "#212934", border: "1px solid #F59E0B", color: "#F59E0B", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" },
+  quickActionBtn: { display: "flex", alignItems: "center", gap: 6, background: "#1E293B", border: "1px solid #334155", color: "#CBD5E1", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" },
   personalTaskCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 16, cursor: "pointer" },
   kanbanGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 },
   kanbanColumn: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 14, minHeight: 450 },
