@@ -52,10 +52,11 @@ const DEPO_STAGES = ["Sürüş Testi", "Sızdırmazlık Testi", "Final Kontrol",
 const KONUM_META = { fabrika1: { label: "Fabrika 1", color: "#38BDF8" }, depo: { label: "Depo", color: "#F59E0B" } };
 
 
+// Örnek/demo kullanıcılar (Ahmet Yılmaz, Selin Yıldız) kaldırıldı. Sistem
+// artık sadece admin hesabıyla başlıyor; gerçek ekip üyeleri Admin
+// Panel > "Kullanıcı Ekle" ile eklenmeli.
 const INITIAL_USERS = [
-  { id: "usr-admin", username: "admin", password: "0000", name: "Sistem Yöneticisi (Admin)", role: "admin", status: "approved", canViewReports: true },
-  { id: "usr-ahmet", username: "ahmet", password: "0000", name: "Ahmet Yılmaz", role: "moderator", status: "approved", canViewReports: false },
-  { id: "usr-selin", username: "selin", password: "0000", name: "Selin Yıldız", role: "user", status: "approved", canViewReports: false }
+  { id: "usr-admin", username: "admin", password: "0000", name: "Muharrem DELİKTAŞ", role: "admin", status: "approved", canViewReports: true }
 ];
 
 // Demo/örnek veri kasıtlı olarak boş bırakıldı — sistem gerçek kullanım
@@ -226,6 +227,13 @@ const INITIAL_REPORTS = [
 
 const SHARED_DOC = doc(db, "app_data", "shared");
 
+// Firestore'daki veri şemasının sürümü. Bu sayı yükseltildiğinde, eski
+// sürümdeki paylaşımlı dokümanlar users/tasks/reports/modules alanları
+// yeni INITIAL_* verisiyle değiştirilerek otomatik göç ediliyor (bkz.
+// aşağıdaki onSnapshot). Şema uyumsuz bir değişiklik yapılmadıkça bu
+// sayıyı artırmaya gerek yok.
+const DATA_VERSION = 3;
+
 // Günün sözü — herkes aynı gün aynı sözü görsün diye yılın gününe göre
 // deterministik seçiliyor (rastgele değil). Kalite/ekip/disiplin temalı,
 // kısa ve öz.
@@ -274,6 +282,7 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [modules, setModules] = useState(INITIAL_MODULES);
   const [reports, setReports] = useState(INITIAL_REPORTS);
+  const [contacts, setContacts] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const isRemoteUpdate = useRef(false);
 
@@ -297,8 +306,17 @@ export default function App() {
   // 1) Firestore'u dinle: doküman değiştiğinde (biri veri eklediğinde/
   //    değiştirdiğinde, ya da başka bir cihazdan giriş yapıldığında) yerel
   //    state'i güncelle. Doküman hiç yoksa (ilk kurulum) başlangıç
-  //    verisiyle oluştur. Doküman VARSA ama bazı alanlar eksikse (örn.
-  //    "reports" yeni eklendi), o alanları tamamlayıp geri yazar.
+  //    verisiyle oluştur.
+  //
+  //    ŞEMA GÖÇÜ: Araç Akış Takibi'nin veri yapısı değişti (subeHattan/
+  //    depodaki/serbestBirakilan -> araclar) ve gerçek görev/kullanıcı
+  //    verisi güncellendi. Firestore'da DATA_VERSION'dan eski bir kayıt
+  //    varsa, users/tasks/reports/modules alanlarını yeni başlangıç
+  //    verisiyle DEĞİŞTİRİP sürümü yükseltiyoruz — bu sayede eski şemadan
+  //    kaynaklanan çökme (report.araclar undefined) bir daha olmuyor ve
+  //    yeni eklenen 82 Kalite Güvence görevi ile araç akışı verisi gerçekten
+  //    Firestore'a yazılıyor. todos/chats/notifications/contacts kullanıcı
+  //    verisi olduğu için dokunulmadan korunuyor.
   useEffect(() => {
     const unsub = onSnapshot(
       SHARED_DOC,
@@ -306,21 +324,39 @@ export default function App() {
         if (snap.exists()) {
           const d = snap.data();
           isRemoteUpdate.current = true;
-          const nextModules = d.modules || INITIAL_MODULES;
-          const nextReports = d.reports || INITIAL_REPORTS;
-          setUsersList(d.users || INITIAL_USERS);
-          setTasks(d.tasks || INITIAL_TASKS);
-          setTodos(d.todos || INITIAL_TODOS);
-          setChats(d.chats || INITIAL_CHATS);
-          setNotifications(d.notifications || []);
-          setModules(nextModules);
-          setReports(nextReports);
-          const missing = {};
-          if (!d.modules) missing.modules = nextModules;
-          if (!d.reports) missing.reports = nextReports;
-          if (Object.keys(missing).length > 0) setDoc(SHARED_DOC, missing, { merge: true }).catch(() => {});
+
+          if (!d.version || d.version < DATA_VERSION) {
+            setUsersList(INITIAL_USERS);
+            setTasks(INITIAL_TASKS);
+            setTodos(d.todos || INITIAL_TODOS);
+            setChats(d.chats || INITIAL_CHATS);
+            setNotifications(d.notifications || []);
+            setModules(INITIAL_MODULES);
+            setReports(INITIAL_REPORTS);
+            setContacts(d.contacts || []);
+            setDoc(SHARED_DOC, {
+              users: INITIAL_USERS,
+              tasks: INITIAL_TASKS,
+              todos: d.todos || INITIAL_TODOS,
+              chats: d.chats || INITIAL_CHATS,
+              notifications: d.notifications || [],
+              modules: INITIAL_MODULES,
+              reports: INITIAL_REPORTS,
+              contacts: d.contacts || [],
+              version: DATA_VERSION,
+            }).catch(() => {});
+          } else {
+            setUsersList(d.users || INITIAL_USERS);
+            setTasks(d.tasks || INITIAL_TASKS);
+            setTodos(d.todos || INITIAL_TODOS);
+            setChats(d.chats || INITIAL_CHATS);
+            setNotifications(d.notifications || []);
+            setModules(d.modules || INITIAL_MODULES);
+            setReports(d.reports || INITIAL_REPORTS);
+            setContacts(d.contacts || []);
+          }
         } else {
-          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS }).catch(() => {});
+          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], version: DATA_VERSION }).catch(() => {});
         }
         setDataLoaded(true);
       },
@@ -339,8 +375,8 @@ export default function App() {
   useEffect(() => {
     if (!dataLoaded) return;
     if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
-    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
-  }, [usersList, tasks, todos, chats, notifications, modules, reports, dataLoaded]);
+    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports, contacts, version: DATA_VERSION }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
+  }, [usersList, tasks, todos, chats, notifications, modules, reports, contacts, dataLoaded]);
 
   useEffect(() => {
     try {
@@ -368,6 +404,20 @@ export default function App() {
     const n = { id: uid(), user: targetName, text, date: todayStr(), read: false };
     setNotifications(prev => [n, ...prev]);
   };
+
+  // Bir göreve, kayıtlı kullanıcı olmayan biri sorumlu yapıldığında adını
+  // "Kişiler" listesine ekler — böylece bir daha yazılırken öneri olarak
+  // çıkar ve Admin Panel'den yönetilebilir. Üye eklemeye gerek kalmadan
+  // iş yerindeki herkesi görev takibine dahil edebilmek için.
+  const addContactIfNew = (name) => {
+    const n = (name || "").trim();
+    if (!n) return;
+    const knownUser = usersList.some(u => u.name === n);
+    const knownContact = contacts.includes(n);
+    if (!knownUser && !knownContact) setContacts(prev => [...prev, n]);
+  };
+
+  const personOptions = Array.from(new Set([...usersList.map(u => u.name), ...contacts])).sort();
 
   const handleLogin = (username, password) => {
     const found = usersList.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
@@ -503,15 +553,16 @@ export default function App() {
         ) : activeModule === "detayli_rapor" ? (
           <DetailedReportView tasks={tasks} usersList={usersList} modules={modules} />
         ) : activeModule === "admin_panel" ? (
-          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
+          currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} contacts={contacts} setContacts={setContacts} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
         ) : (
           <KanbanBoardView activeModule={activeModule} modules={modules} tasks={tasks.filter((t) => t.module === activeModule)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} currentUser={currentUser} onOpenDetail={setSelectedTask} onMoveStage={(id, st) => setTasks(tasks.map(t => t.id === id ? {...t, durum: st, bitisTarihi: st === "tamam" ? todayStr() : t.bitisTarihi} : t))} onCreateTask={(tData) => {
             const newId = uid();
             const prefix = (tData.module || "ask").substring(0, 3).toUpperCase();
             const newTask = { id: newId, module: tData.module || "asakai", kod: `${prefix}-2026-${(tasks.length+1).toString().padStart(3,"0")}`, baslik: tData.baslik, sorumlu: tData.sorumlu || currentUser.name, gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: todayStr(), vade: tData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] };
             setTasks(prev => [...prev, newTask]);
+            addContactIfNew(newTask.sorumlu);
             addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`);
-          }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} usersList={usersList} />
+          }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} usersList={usersList} personOptions={personOptions} />
         )}
       </main>
 
@@ -519,7 +570,7 @@ export default function App() {
       <ChatBar chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} />
 
       {selectedTask && (
-        <TaskDetailModal task={selectedTask} currentUser={currentUser} onClose={() => setSelectedTask(null)} onSaveTask={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} />
+        <TaskDetailModal task={selectedTask} currentUser={currentUser} personOptions={personOptions} onClose={() => setSelectedTask(null)} onSaveTask={(updated) => { setTasks(tasks.map(t => t.id === updated.id ? updated : t)); addContactIfNew(updated.sorumlu); }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} />
       )}
       {showPasswordModal && <ChangePasswordModal currentUser={currentUser} onClose={() => setShowPasswordModal(false)} onSaveUser={(updated) => setUsersList(usersList.map(u => u.id === updated.id ? updated : u))} />}
       {showNotificationsModal && <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={() => setNotifications(notifications.map(n => n.user === currentUser.name ? {...n, read: true} : n))} />}
@@ -801,9 +852,9 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
             <ArrowRight size={16} color="#94A3B8" />
           </div>
           <div style={{ display: "flex", gap: 20, marginTop: 10, fontSize: 12 }}>
-            <span style={{ color: "#38BDF8" }}>{latestReport.araclar.filter(a => a.konum === "fabrika1").length} Fabrika 1</span>
-            <span style={{ color: "#F59E0B" }}>{latestReport.araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length} Depo</span>
-            <span style={{ color: "#10B981" }}>{latestReport.araclar.filter(a => a.asama === "Serbestlik").length} Serbest</span>
+            <span style={{ color: "#38BDF8" }}>{(latestReport.araclar || []).filter(a => a.konum === "fabrika1").length} Fabrika 1</span>
+            <span style={{ color: "#F59E0B" }}>{(latestReport.araclar || []).filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length} Depo</span>
+            <span style={{ color: "#10B981" }}>{(latestReport.araclar || []).filter(a => a.asama === "Serbestlik").length} Serbest</span>
           </div>
         </div>
       )}
@@ -846,7 +897,7 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
   );
 }
 
-function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList }) {
+function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList, personOptions }) {
   const [showModal, setShowModal] = useState(false);
   const currentModObj = modules.find(m => m.id === activeModule) || modules[0];
   const CurrentModIcon = MODULE_META[currentModObj.id]?.icon || ShieldCheck;
@@ -885,12 +936,12 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
           );
         })}
       </div>
-      {showModal && <CreateTaskModal activeModule={activeModule} usersList={usersList} currentUser={currentUser} onClose={() => setShowModal(false)} onCreate={onCreateTask} />}
+      {showModal && <CreateTaskModal activeModule={activeModule} usersList={usersList} personOptions={personOptions} currentUser={currentUser} onClose={() => setShowModal(false)} onCreate={onCreateTask} />}
     </div>
   );
 }
 
-function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCreate }) {
+function CreateTaskModal({ activeModule, usersList, personOptions, currentUser, onClose, onCreate }) {
   const [baslik, setBaslik] = useState("");
   const [sorumlu, setSorumlu] = useState(currentUser?.name || "");
   const [vade, setVade] = useState(todayStr());
@@ -900,7 +951,11 @@ function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCrea
         <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Yeni Görev</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
           <div><label style={styles.inputLabel}>Başlık</label><input style={styles.mainInput} value={baslik} onChange={e => setBaslik(e.target.value)} placeholder="Görev yazın..." required /></div>
-          <div><label style={styles.inputLabel}>Sorumlu</label><select style={styles.selectInput} value={sorumlu} onChange={e => setSorumlu(e.target.value)}>{usersList.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
+          <div>
+            <label style={styles.inputLabel}>Sorumlu (üye olmayan biri de yazılabilir)</label>
+            <input style={styles.mainInput} list="kisi-listesi-yeni" value={sorumlu} onChange={e => setSorumlu(e.target.value)} placeholder="İsim yazın..." />
+            <datalist id="kisi-listesi-yeni">{(personOptions || []).map(p => <option key={p} value={p} />)}</datalist>
+          </div>
           <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
           <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module: activeModule }); onClose(); }}>Oluştur</button>
         </div>
@@ -909,15 +964,21 @@ function CreateTaskModal({ activeModule, usersList, currentUser, onClose, onCrea
   );
 }
 
-function TaskDetailModal({ task, currentUser, onClose, onSaveTask, onDeleteTask }) {
+function TaskDetailModal({ task, currentUser, personOptions, onClose, onSaveTask, onDeleteTask }) {
   const [subText, setSubText] = useState("");
   const [editTitle, setEditTitle] = useState(task.baslik);
+  const [editSorumlu, setEditSorumlu] = useState(task.sorumlu);
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.drawerContainer}>
         <div style={styles.drawerHeader}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
         <div style={styles.drawerBody}>
           <input style={styles.mainInput} value={editTitle} onChange={e => setEditTitle(e.target.value)} onBlur={() => onSaveTask({...task, baslik: editTitle})} />
+          <div>
+            <label style={styles.inputLabel}>Sorumlu (üye olmayan biri de yazılabilir)</label>
+            <input style={styles.mainInput} list="kisi-listesi-detay" value={editSorumlu} onChange={e => setEditSorumlu(e.target.value)} onBlur={() => onSaveTask({...task, sorumlu: editSorumlu})} />
+            <datalist id="kisi-listesi-detay">{(personOptions || []).map(p => <option key={p} value={p} />)}</datalist>
+          </div>
           <select style={styles.selectInput} value={task.durum} onChange={e => onSaveTask({...task, durum: e.target.value})}>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
           <div style={styles.subtaskSection}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#F59E0B" }}>Alt Adımlar</div>
@@ -972,9 +1033,9 @@ function ReportsView({ reports, setReports, currentUser }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: selected ? "80vh" : "none", overflowY: selected ? "auto" : "visible" }}>
           {sorted.length === 0 && <div style={{ color: "#64748B", textAlign: "center", padding: 30 }}>Henüz rapor eklenmedi.</div>}
           {sorted.map(r => {
-            const fCount = r.araclar.filter(a => a.konum === "fabrika1").length;
-            const dCount = r.araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
-            const sCount = r.araclar.filter(a => a.asama === "Serbestlik").length;
+            const fCount = (r.araclar || []).filter(a => a.konum === "fabrika1").length;
+            const dCount = (r.araclar || []).filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
+            const sCount = (r.araclar || []).filter(a => a.asama === "Serbestlik").length;
             return (
               <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} onClick={() => setSelectedId(r.id)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1034,9 +1095,9 @@ function ReportDetail({ report, onUpdate, onClose }) {
   const [reworkFormFor, setReworkFormFor] = useState(null);
   const [reworkText, setReworkText] = useState("");
 
-  const fabrikaAraclar = report.araclar.filter(a => a.konum === "fabrika1");
-  const depoAraclar = report.araclar.filter(a => a.konum === "depo");
-  const serbestCount = report.araclar.filter(a => a.asama === "Serbestlik").length;
+  const fabrikaAraclar = (report.araclar || []).filter(a => a.konum === "fabrika1");
+  const depoAraclar = (report.araclar || []).filter(a => a.konum === "depo");
+  const serbestCount = (report.araclar || []).filter(a => a.asama === "Serbestlik").length;
 
   const saveTitle = () => {
     onUpdate({ ...report, baslik: titleDraft.trim() || report.baslik });
@@ -1055,7 +1116,7 @@ function ReportDetail({ report, onUpdate, onClose }) {
   const addVehicle = () => {
     if (!vehForm.no.trim()) return;
     const v = { id: uid(), no: vehForm.no.trim(), konum: addingTo, asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih, reworklar: [] };
-    onUpdate({ ...report, araclar: [...report.araclar, v] });
+    onUpdate({ ...report, araclar: [...(report.araclar || []), v] });
     setAddingTo(null);
   };
 
@@ -1066,20 +1127,20 @@ function ReportDetail({ report, onUpdate, onClose }) {
   };
 
   const saveEdit = () => {
-    onUpdate({ ...report, araclar: report.araclar.map(a => a.id === editingVehId ? { ...a, no: vehForm.no.trim(), asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih } : a) });
+    onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === editingVehId ? { ...a, no: vehForm.no.trim(), asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih } : a) });
     setEditingVehId(null);
   };
 
-  const removeVehicle = (id) => onUpdate({ ...report, araclar: report.araclar.filter(a => a.id !== id) });
+  const removeVehicle = (id) => onUpdate({ ...report, araclar: (report.araclar || []).filter(a => a.id !== id) });
 
   const addRework = (vehId) => {
     if (!reworkText.trim()) return;
-    onUpdate({ ...report, araclar: report.araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
+    onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
     setReworkText("");
     setReworkFormFor(null);
   };
 
-  const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: report.araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
+  const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
 
   const exportPdf = () => {
     const prevTitle = document.title;
@@ -1244,10 +1305,11 @@ function DetailedReportView({ tasks, modules }) {
   );
 }
 
-function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) {
+function AdminPermissionsView({ usersList, setUsersList, modules, setModules, contacts, setContacts }) {
   const [showModal, setShowModal] = useState(false);
   const [editingModules, setEditingModules] = useState(() => Object.fromEntries(modules.map(m => [m.id, m.label])));
   const [newModuleLabel, setNewModuleLabel] = useState("");
+  const [newContactName, setNewContactName] = useState("");
 
   const saveModuleLabel = (id) => {
     setModules(modules.map(m => m.id === id ? { ...m, label: (editingModules[id] || m.label).trim() || m.label } : m));
@@ -1277,9 +1339,38 @@ function AdminPermissionsView({ usersList, setUsersList, modules, setModules }) 
     }
   };
 
+  const addContact = () => {
+    const n = newContactName.trim();
+    if (!n) return;
+    if (usersList.some(u => u.name === n) || contacts.includes(n)) { window.alert("Bu isim zaten kayıtlı."); return; }
+    setContacts([...contacts, n]);
+    setNewContactName("");
+  };
+
+  const removeContact = (n) => {
+    if (window.confirm(`"${n}" adını kişi listesinden silmek istediğinize emin misiniz? Bu kişiye daha önce atanmış görevler etkilenmez, sadece öneri listesinden kalkar.`)) {
+      setContacts(contacts.filter(c => c !== n));
+    }
+  };
+
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}><h1 style={styles.viewTitle}>Admin Paneli</h1><button style={styles.primaryActionBtn} onClick={() => setShowModal(true)}>Kullanıcı Ekle</button></div>
+
+      <div style={styles.yearEndTableCard}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 4 }}>Kişiler (Üye Olmayan)</h3>
+        <p style={{ fontSize: 11, color: "#94A3B8", marginBottom: 12 }}>Sisteme giriş yapamayan ama görev atayabileceğiniz iş arkadaşlarınız. Bir görev formunda yeni bir isim yazdığınızda buraya otomatik eklenir.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+          {contacts.length === 0 && <span style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>Henüz kişi yok.</span>}
+          {contacts.map(c => (
+            <span key={c} style={styles.chip}>{c} <X size={11} style={{ cursor: "pointer" }} onClick={() => removeContact(c)} /></span>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={{ ...styles.mainInput, flex: 1 }} placeholder="Yeni kişi adı..." value={newContactName} onChange={(e) => setNewContactName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addContact()} />
+          <button style={styles.addInlineBtn} onClick={addContact}>+ Ekle</button>
+        </div>
+      </div>
 
       <div style={styles.yearEndTableCard}>
         <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Modüller</h3>
@@ -1530,6 +1621,7 @@ const styles = {
   kanbanCardTitle: { fontSize: 13, fontWeight: 700, cursor: "pointer", marginTop: 6 },
   kanbanCardFooter: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94A3B8", marginTop: 8 },
   taskCodeBadge: { fontFamily: "monospace", fontSize: 10, color: "#F59E0B", background: "rgba(245, 158, 11, 0.15)", padding: "2px 6px", borderRadius: 4, fontWeight: 700 },
+  chip: { background: "#0F172A", border: "1px solid #334155", borderRadius: 20, padding: "4px 8px 4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 },
   filterToolbar: { display: "flex", gap: 12 },
   searchWrapper: { display: "flex", alignItems: "center", gap: 8, background: "#1E293B", padding: "8px 12px", borderRadius: 8, border: "1px solid #334155", flex: 1 },
   searchInput: { background: "transparent", border: "none", color: "#F8FAFC", fontSize: 12, outline: "none", width: "100%" },
