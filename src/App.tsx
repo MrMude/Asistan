@@ -175,7 +175,7 @@ const INITIAL_REPORTS = [
     baslik: "Gün Sonu Kalite Kontrol ve Araç Durum Raporu",
     tarih: "2026-08-22",
     hazirlayan: "Kalite Güvence Yönetimi (K-QN)",
-    bolum: "Şube & Depo Takip",
+    bolum: "Fabrika 1 & Depo Takip",
     araclar: [
       { id: "veh-1", no: "141", konum: "fabrika1", asama: "Lift", detay: "Lifte alındı.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-2", no: "146", konum: "fabrika1", asama: "Sürüş Testi", detay: "Açık maddeler tamamlandı, vakum pompası sorunu giderildi. Sadece sürüş testi kaldı.", tarih: "2026-08-22", reworklar: [] },
@@ -865,7 +865,7 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
       </div>
 
       {latestReport && (
-        <div style={styles.yearEndTableCard} onClick={() => onNavigateModule("raporlar")} className="clickable-card">
+        <div style={styles.yearEndTableCard} onClick={() => onNavigateModule("raporlar")} className="hover-lift">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
             <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B" }}>Son Araç Akışı Raporu — {fmtDate(latestReport.tarih)}</h3>
             <ArrowRight size={16} color="#94A3B8" />
@@ -919,7 +919,7 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
                 <div style={styles.aracKanbanColBody}>
                   {stageTasks.length === 0 && <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>}
                   {stageTasks.map(t => (
-                    <div key={t.id} style={{ ...styles.aracVehCard, cursor: "pointer" }} onClick={() => onOpenDetail(t)}>
+                    <div key={t.id} style={{ ...styles.aracVehCard, cursor: "pointer" }} className="hover-lift" onClick={() => onOpenDetail(t)}>
                       <span style={styles.taskCodeBadge}>{t.kod}</span>
                       <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>{t.baslik}</div>
                       {t.vade && <div style={{ fontSize: 10, color: t.durum !== "tamam" && t.vade < today ? "#EF4444" : "#64748B", marginTop: 4 }}>{t.durum !== "tamam" && t.vade < today ? "⚠ " : ""}{fmtDate(t.vade)}</div>}
@@ -959,7 +959,7 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
                 {stageTasks.map(task => {
                   const isOverdue = task.durum !== "tamam" && task.vade && task.vade < todayStr();
                   return (
-                    <div key={task.id} style={{ ...styles.kanbanCard, ...(isOverdue ? { borderColor: "#EF4444" } : {}) }} draggable onDragStart={e => e.dataTransfer.setData("text", task.id)}>
+                    <div key={task.id} style={{ ...styles.kanbanCard, ...(isOverdue ? { borderColor: "#EF4444" } : {}) }} className="hover-lift" draggable onDragStart={e => e.dataTransfer.setData("text", task.id)}>
                       <div style={styles.cardHeaderRow}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.deleteIconBtn} onClick={() => onDeleteTask(task.id)}><Trash2 size={12} /></button></div>
                       <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(task)}>{task.baslik}</div>
                       <div style={styles.kanbanCardFooter}>
@@ -1075,7 +1075,7 @@ function ReportsView({ reports, setReports, currentUser }) {
             const dCount = (r.araclar || []).filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
             const sCount = (r.araclar || []).filter(a => a.asama === "Serbestlik").length;
             return (
-              <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} onClick={() => setSelectedId(r.id)}>
+              <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} className="hover-lift" onClick={() => setSelectedId(r.id)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtDate(r.tarih)}</span>
                   {canDelete(r) && <Trash2 size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} />}
@@ -1104,7 +1104,7 @@ function NewReportModal({ currentUser, onClose, onCreate }) {
   const [baslik, setBaslik] = useState("Gün Sonu Kalite Kontrol ve Araç Durum Raporu");
   const [tarih, setTarih] = useState(todayStr());
   const [hazirlayan, setHazirlayan] = useState(currentUser.name);
-  const [bolum, setBolum] = useState("Şube & Depo Takip");
+  const [bolum, setBolum] = useState("Fabrika 1 & Depo Takip");
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.createModalContent}>
@@ -1191,12 +1191,21 @@ function ReportDetail({ report, onUpdate, onClose }) {
     onUpdate({ ...report, araclar: araclar.map(a => a.id === v.id ? { ...a, konum: info.next.konum, asama: info.next.asama, tarih: todayStr() } : a) });
   };
 
+  // Çek-bırak: bir araç kartı herhangi bir sütuna sürüklenip bırakılabilir —
+  // ileri VEYA geri (işlemi geri almak için). "Sonraki Aşama" butonuyla
+  // aynı güncellemeyi yapar, sadece hedef aşamayı kullanıcı seçer.
+  const moveVehicleToColumn = (vehId, konum, asama) => {
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, konum, asama, tarih: todayStr() } : a) });
+  };
+
   const addRework = (vehId) => {
     if (!reworkText.trim()) return;
-    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr(), done: false }] } : a) });
     setReworkText("");
     setReworkFormFor(null);
   };
+
+  const toggleRework = (vehId, rwId) => onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.map(r => r.id === rwId ? { ...r, done: !r.done } : r) } : a) });
 
   const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
 
@@ -1206,6 +1215,33 @@ function ReportDetail({ report, onUpdate, onClose }) {
     window.print();
     setTimeout(() => { document.title = prevTitle; }, 800);
   };
+
+  const fabrikaAraclar = araclar.filter(a => a.konum === "fabrika1");
+  const depoAraclar = araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik");
+  const serbestAraclar = araclar.filter(a => a.asama === "Serbestlik");
+
+  const printGroup = (title, list, color) => (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color, marginBottom: 6, borderBottom: "1px solid #ccc", paddingBottom: 4 }}>{title} ({list.length})</div>
+      {list.length === 0 ? (
+        <div style={{ fontSize: 11, fontStyle: "italic" }}>Kayıt yok.</div>
+      ) : (
+        <table style={styles.table}>
+          <thead><tr><th style={styles.th}>No</th><th style={styles.th}>Aşama</th><th style={styles.th}>Detay</th><th style={styles.th}>Tarih</th></tr></thead>
+          <tbody>
+            {list.map(v => (
+              <tr key={v.id} style={styles.tr}>
+                <td style={styles.td}>#{v.no}</td>
+                <td style={styles.td}>{v.asama}</td>
+                <td style={styles.td}>{v.detay}{(v.reworklar || []).length > 0 ? ` | Rework: ${v.reworklar.map(r => (r.done ? "[✓] " : "") + r.text).join("; ")}` : ""}</td>
+                <td style={styles.td}>{fmtDate(v.tarih)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }} id="print-area">
@@ -1232,7 +1268,7 @@ function ReportDetail({ report, onUpdate, onClose }) {
       <div style={{ display: "flex", gap: 16 }} className="no-print">
         <div style={styles.vertStatRail}>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#94A3B8" }} /><div><div style={styles.vertStatValue}>{araclar.length}</div><div style={styles.vertStatLabel}>Toplam Araç</div></div></div>
-          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#38BDF8" }} /><div><div style={styles.vertStatValue}>{fabrikaCount}</div><div style={styles.vertStatLabel}>Şubedeki (Fabrika 1)</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#38BDF8" }} /><div><div style={styles.vertStatValue}>{fabrikaCount}</div><div style={styles.vertStatLabel}>Fabrika 1</div></div></div>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#F59E0B" }} /><div><div style={styles.vertStatValue}>{depoCount}</div><div style={styles.vertStatLabel}>Depodaki</div></div></div>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#10B981" }} /><div><div style={styles.vertStatValue}>{serbestCount}</div><div style={styles.vertStatLabel}>Serbest Kalan</div></div></div>
         </div>
@@ -1243,7 +1279,12 @@ function ReportDetail({ report, onUpdate, onClose }) {
             const color = KONUM_META[col.konum].color;
             const colKey = `${col.konum}-${col.asama}`;
             return (
-              <div key={colKey} style={styles.aracKanbanCol}>
+              <div
+                key={colKey}
+                style={styles.aracKanbanCol}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); const vehId = e.dataTransfer.getData("text/plain"); if (vehId) moveVehicleToColumn(vehId, col.konum, col.asama); }}
+              >
                 <div style={{ ...styles.aracKanbanColHeader, borderTopColor: color }}>
                   <div style={{ fontSize: 9, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>{KONUM_META[col.konum].label}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1280,9 +1321,16 @@ function ReportDetail({ report, onUpdate, onClose }) {
                         </div>
                       </div>
                     ) : (
-                      <div key={v.id} style={styles.aracVehCard}>
+                      <div
+                        key={v.id}
+                        style={styles.aracVehCard}
+                        className="hover-lift"
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData("text/plain", v.id)}
+                        title="Başka bir aşamaya sürükleyip bırakabilirsiniz"
+                      >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={styles.reportRowNo}>#{v.no}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GripVertical size={11} color="#475569" /><span style={styles.reportRowNo}>#{v.no}</span></span>
                           <div style={{ display: "flex", gap: 5 }}>
                             <Edit2 size={11} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => openEditForm(v)} />
                             <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeVehicle(v.id)} />
@@ -1291,8 +1339,10 @@ function ReportDetail({ report, onUpdate, onClose }) {
                         {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
                         <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
                         {(v.reworklar || []).map(rw => (
-                          <div key={rw.id} style={{ fontSize: 10, color: "#FCA5A5", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
-                            🔧 {rw.text} <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => removeRework(v.id, rw.id)} />
+                          <div key={rw.id} style={{ fontSize: 10, marginTop: 3, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }} onClick={() => toggleRework(v.id, rw.id)}>
+                            {rw.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0 }} />}
+                            <span style={{ color: rw.done ? "#64748B" : "#FCA5A5", textDecoration: rw.done ? "line-through" : "none", flex: 1 }}>🔧 {rw.text}</span>
+                            <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeRework(v.id, rw.id); }} />
                           </div>
                         ))}
                         {reworkFormFor === v.id ? (
@@ -1320,22 +1370,12 @@ function ReportDetail({ report, onUpdate, onClose }) {
         </div>
       </div>
 
-      {/* Sadece yazdırırken görünen sade tablo görünümü */}
+      {/* Sadece yazdırırken görünen, Fabrika 1 / Depo / Serbestlik olarak
+          gruplanmış sade görünüm — orijinal PDF rapor yapısıyla aynı. */}
       <div className="print-only">
-        <table style={styles.table}>
-          <thead><tr><th style={styles.th}>No</th><th style={styles.th}>Konum</th><th style={styles.th}>Aşama</th><th style={styles.th}>Detay</th><th style={styles.th}>Tarih</th></tr></thead>
-          <tbody>
-            {araclar.map(v => (
-              <tr key={v.id} style={styles.tr}>
-                <td style={styles.td}>#{v.no}</td>
-                <td style={styles.td}>{KONUM_META[v.konum]?.label || v.konum}</td>
-                <td style={styles.td}>{v.asama}</td>
-                <td style={styles.td}>{v.detay}{(v.reworklar || []).length > 0 ? ` | Rework: ${v.reworklar.map(r => r.text).join("; ")}` : ""}</td>
-                <td style={styles.td}>{fmtDate(v.tarih)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {printGroup("Fabrika 1", fabrikaAraclar, "#0369A1")}
+        {printGroup("Depo (İşlemde)", depoAraclar, "#B45309")}
+        {printGroup("Serbest Bırakılanlar", serbestAraclar, "#047857")}
       </div>
     </div>
   );
@@ -1679,7 +1719,7 @@ function LoginScreen({ onLogin, onRegister, error, setError }) {
 
 const styles = {
   appShell: { fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0F172A", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "column" },
-  header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "#1E293B", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap" },
+  header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "linear-gradient(90deg, #1E293B 0%, #16202f 100%)", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap" },
   brand: { display: "flex", alignItems: "center", gap: 10 },
   logoIcon: { background: "rgba(245, 158, 11, 0.15)", padding: 8, borderRadius: 10, display: "flex" },
   brandName: { fontWeight: 800, fontSize: 16, color: "#F59E0B" },
@@ -1714,17 +1754,17 @@ const styles = {
   vertStatDot: { width: 10, height: 10, borderRadius: 10, flexShrink: 0 },
   vertStatValue: { fontSize: 18, fontWeight: 800 },
   vertStatLabel: { fontSize: 10, color: "#94A3B8" },
-  aracKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", flex: 1, paddingBottom: 8 },
-  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, minWidth: 190, maxWidth: 190, flexShrink: 0, display: "flex", flexDirection: "column" },
+  aracKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", flex: 1, minWidth: 0, paddingBottom: 8 },
+  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flex: "1 1 190px", minWidth: 190, flexShrink: 0, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
+  aracVehCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "grab", transition: "transform 0.12s, border-color 0.12s, box-shadow 0.12s" },
+  dashKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 },
+  dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flex: "1 1 220px", minWidth: 220, flexShrink: 0, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
   aracKanbanColHeader: { borderTop: "3px solid", padding: "8px 10px 6px" },
   aracKanbanColBody: { padding: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" },
   aracAddColBtn: { background: "transparent", border: "1px dashed #334155", color: "#94A3B8", borderRadius: 6, padding: "5px 0", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 },
-  aracVehCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8 },
   aracReworkBtn: { background: "transparent", border: "none", color: "#F59E0B", fontSize: 10, cursor: "pointer", padding: "4px 0", textAlign: "left" },
   aracAdvanceBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 6, background: "#212934", border: "1px solid #10B981", color: "#10B981", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer" },
   aracServeBadge: { marginTop: 6, fontSize: 10, color: "#10B981", fontWeight: 700, textAlign: "center" },
-  dashKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 },
-  dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, minWidth: 210, maxWidth: 210, flexShrink: 0, display: "flex", flexDirection: "column" },
   quickActionBtn: { display: "flex", alignItems: "center", gap: 6, background: "#1E293B", border: "1px solid #334155", color: "#CBD5E1", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" },
   personalTaskCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 16, cursor: "pointer" },
   kanbanGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 },
