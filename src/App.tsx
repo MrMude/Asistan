@@ -47,9 +47,16 @@ const KANBAN_STAGES = [
 // aşama sırası vardır. Depo'da "Serbestlik" son aşamadır. Rework/tamir
 // gerekiyorsa aracın "reworklar" listesine ayrı kayıt eklenir, ana akış
 // aşamasını değiştirmeden.
-const FABRIKA1_STAGES = ["Lift", "EOL", "Şarj Testi", "Sürüş Testi"];
-const DEPO_STAGES = ["Sürüş Testi", "Sızdırmazlık Testi", "Final Kontrol", "Elektrik Kontrol", "Serbestlik"];
+const FABRIKA1_STAGES = ["Lift", "EOL", "Sürüş Testi", "EE Kontrol"];
+const DEPO_STAGES = ["Sürüş Testi", "Sızdırmazlık Testi", "Final Kontrol", "EE Kontrol", "Serbestlik"];
 const KONUM_META = { fabrika1: { label: "Fabrika 1", color: "#38BDF8" }, depo: { label: "Depo", color: "#F59E0B" } };
+// Kanban görünümü için Fabrika 1 + Depo aşamalarının tamamı tek bir sıralı
+// sütun listesi olarak — her sütun konum+aşama ikilisiyle tanımlanır çünkü
+// "Sürüş Testi" ve "EE Kontrol" her iki konumda da var.
+const ARAC_KANBAN_COLUMNS = [
+  ...FABRIKA1_STAGES.map((asama) => ({ konum: "fabrika1", asama })),
+  ...DEPO_STAGES.map((asama) => ({ konum: "depo", asama })),
+];
 
 
 // Örnek/demo kullanıcılar (Ahmet Yılmaz, Selin Yıldız) kaldırıldı. Sistem
@@ -173,14 +180,14 @@ const INITIAL_REPORTS = [
       { id: "veh-1", no: "141", konum: "fabrika1", asama: "Lift", detay: "Lifte alındı.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-2", no: "146", konum: "fabrika1", asama: "Sürüş Testi", detay: "Açık maddeler tamamlandı, vakum pompası sorunu giderildi. Sadece sürüş testi kaldı.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-3", no: "148", konum: "fabrika1", asama: "Sürüş Testi", detay: "Şarj testi OK. Sürüş testi yapılacak, görsel kusurlar gideriliyor.", tarih: "2026-08-22", reworklar: [] },
-      { id: "veh-4", no: "150", konum: "fabrika1", asama: "Şarj Testi", detay: "Şarj testine girdi.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-4", no: "150", konum: "fabrika1", asama: "EOL", detay: "Şarj testine girdi.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-5", no: "144", konum: "depo", asama: "Final Kontrol", detay: "Bagaj iç sağ üst plastik deforme (derin çizik). Arka bagaj logo takıldı. EE testi yapıldı, final kontrol yapılacak.", tarih: "2026-08-22", reworklar: [] },
-      { id: "veh-6", no: "135", konum: "depo", asama: "Elektrik Kontrol", detay: "Ön logo takıldı. Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
-      { id: "veh-7", no: "136", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
-      { id: "veh-8", no: "137", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-6", no: "135", konum: "depo", asama: "EE Kontrol", detay: "Ön logo takıldı. Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-7", no: "136", konum: "depo", asama: "EE Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-8", no: "137", konum: "depo", asama: "EE Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-9", no: "138", konum: "depo", asama: "Sızdırmazlık Testi", detay: "Bagaj kilit su kaçağı devam ediyor. Sağ kapı üst iç tavan su kaçağı tespit edildi. Sealler işlemleri yapıldı, sızdırmazlık testi yapılacak.", tarih: "2026-08-22", reworklar: [{ id: "rw-9", text: "Su kaçağı devam ediyor, sealler uygulandı.", tarih: "2026-08-22" }] },
-      { id: "veh-10", no: "145", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
-      { id: "veh-11", no: "163", konum: "depo", asama: "Elektrik Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-10", no: "145", konum: "depo", asama: "EE Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
+      { id: "veh-11", no: "163", konum: "depo", asama: "EE Kontrol", detay: "Sızdırmazlık testi OK. EE testi bekleniyor.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-12", no: "133", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
       { id: "veh-13", no: "129", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
       { id: "veh-14", no: "134", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
@@ -232,7 +239,7 @@ const SHARED_DOC = doc(db, "app_data", "shared");
 // yeni INITIAL_* verisiyle değiştirilerek otomatik göç ediliyor (bkz.
 // aşağıdaki onSnapshot). Şema uyumsuz bir değişiklik yapılmadıkça bu
 // sayıyı artırmaya gerek yok.
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
 
 // Günün sözü — herkes aynı gün aynı sözü görsün diye yılın gününe göre
 // deterministik seçiliyor (rastgele değil). Kalite/ekip/disiplin temalı,
@@ -308,15 +315,16 @@ export default function App() {
   //    state'i güncelle. Doküman hiç yoksa (ilk kurulum) başlangıç
   //    verisiyle oluştur.
   //
-  //    ŞEMA GÖÇÜ: Araç Akış Takibi'nin veri yapısı değişti (subeHattan/
-  //    depodaki/serbestBirakilan -> araclar) ve gerçek görev/kullanıcı
-  //    verisi güncellendi. Firestore'da DATA_VERSION'dan eski bir kayıt
-  //    varsa, users/tasks/reports/modules alanlarını yeni başlangıç
-  //    verisiyle DEĞİŞTİRİP sürümü yükseltiyoruz — bu sayede eski şemadan
-  //    kaynaklanan çökme (report.araclar undefined) bir daha olmuyor ve
-  //    yeni eklenen 82 Kalite Güvence görevi ile araç akışı verisi gerçekten
-  //    Firestore'a yazılıyor. todos/chats/notifications/contacts kullanıcı
-  //    verisi olduğu için dokunulmadan korunuyor.
+  //    ŞEMA GÖÇÜ: Sürüm numarası her yükseldiğinde SADECE o sürüme özgü
+  //    düzeltme uygulanır — mevcut raporlar/görevler/modüller gibi canlı
+  //    veriler korunur, toptan silinip başlangıç verisiyle değiştirilmez.
+  //    v2: eski Araç Akış Takibi şemasından (subeHattan/depodaki/
+  //        serbestBirakilan) kaynaklanan çökmeyi düzeltmek için bir kerelik
+  //        tam sıfırlama (bu sürümün altındaki dokümanlar için).
+  //    v3: sadece admin kaydının görünen adını düzeltir.
+  //    v4: sadece eski aşama adlarını (Şarj Testi->EOL, Elektrik
+  //        Kontrol->EE Kontrol) yeniden adlandırır, araç kayıtlarının
+  //        geri kalanına dokunmaz.
   useEffect(() => {
     const unsub = onSnapshot(
       SHARED_DOC,
@@ -324,36 +332,48 @@ export default function App() {
         if (snap.exists()) {
           const d = snap.data();
           isRemoteUpdate.current = true;
+          const v = d.version || 0;
 
-          if (!d.version || d.version < DATA_VERSION) {
-            setUsersList(INITIAL_USERS);
-            setTasks(INITIAL_TASKS);
-            setTodos(d.todos || INITIAL_TODOS);
-            setChats(d.chats || INITIAL_CHATS);
-            setNotifications(d.notifications || []);
-            setModules(INITIAL_MODULES);
-            setReports(INITIAL_REPORTS);
-            setContacts(d.contacts || []);
+          let nextUsers = d.users || INITIAL_USERS;
+          let nextTasks = d.tasks || INITIAL_TASKS;
+          let nextModules = d.modules || INITIAL_MODULES;
+          let nextReports = d.reports || INITIAL_REPORTS;
+
+          if (v < 2) {
+            // Kritik göç: eski rapor şeması çökmeye sebep oluyordu.
+            nextUsers = INITIAL_USERS;
+            nextTasks = INITIAL_TASKS;
+            nextModules = INITIAL_MODULES;
+            nextReports = INITIAL_REPORTS;
+          }
+          if (v < 3) {
+            nextUsers = nextUsers.map(u => (u.username === "admin" && u.name === "Sistem Yöneticisi (Admin)") ? { ...u, name: "Muharrem DELİKTAŞ" } : u);
+          }
+          if (v < 4) {
+            const renameStage = (s) => (s === "Şarj Testi" ? "EOL" : s === "Elektrik Kontrol" ? "EE Kontrol" : s);
+            nextReports = nextReports.map(r => ({ ...r, araclar: (r.araclar || []).map(a => ({ ...a, asama: renameStage(a.asama) })) }));
+          }
+
+          const nextTodos = d.todos || INITIAL_TODOS;
+          const nextChats = d.chats || INITIAL_CHATS;
+          const nextNotifications = d.notifications || [];
+          const nextContacts = d.contacts || [];
+
+          setUsersList(nextUsers);
+          setTasks(nextTasks);
+          setTodos(nextTodos);
+          setChats(nextChats);
+          setNotifications(nextNotifications);
+          setModules(nextModules);
+          setReports(nextReports);
+          setContacts(nextContacts);
+
+          if (v < DATA_VERSION) {
             setDoc(SHARED_DOC, {
-              users: INITIAL_USERS,
-              tasks: INITIAL_TASKS,
-              todos: d.todos || INITIAL_TODOS,
-              chats: d.chats || INITIAL_CHATS,
-              notifications: d.notifications || [],
-              modules: INITIAL_MODULES,
-              reports: INITIAL_REPORTS,
-              contacts: d.contacts || [],
-              version: DATA_VERSION,
+              users: nextUsers, tasks: nextTasks, todos: nextTodos, chats: nextChats,
+              notifications: nextNotifications, modules: nextModules, reports: nextReports,
+              contacts: nextContacts, version: DATA_VERSION,
             }).catch(() => {});
-          } else {
-            setUsersList(d.users || INITIAL_USERS);
-            setTasks(d.tasks || INITIAL_TASKS);
-            setTodos(d.todos || INITIAL_TODOS);
-            setChats(d.chats || INITIAL_CHATS);
-            setNotifications(d.notifications || []);
-            setModules(d.modules || INITIAL_MODULES);
-            setReports(d.reports || INITIAL_REPORTS);
-            setContacts(d.contacts || []);
           }
         } else {
           setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], version: DATA_VERSION }).catch(() => {});
@@ -817,7 +837,6 @@ function TodoListView({ todos, setTodos, currentUser }) {
 // --- DİĞER EKRANLAR (DASHBOARD, KANBAN, RAPOR, ADMIN) ---
 function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, setDashboardFilter, onOpenDetail, onNavigateModule }) {
   const myTasks = tasks.filter(t => t.sorumlu === currentUser.name);
-  const filtered = myTasks.filter(t => dashboardFilter === "aktif" ? t.durum !== "tamam" : dashboardFilter === "tamamlanan" ? t.durum === "tamam" : true);
   const today = todayStr();
   const overdueCount = myTasks.filter(t => t.durum !== "tamam" && t.vade && t.vade < today).length;
   const teamActive = tasks.filter(t => t.durum !== "tamam").length;
@@ -839,9 +858,9 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
       </div>
 
       <div style={styles.dashboardCardGrid}>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8", cursor: "pointer" }} onClick={() => setDashboardFilter("all")}><div style={styles.dashCardTitle}>Toplam İşim</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B", cursor: "pointer" }} onClick={() => setDashboardFilter("aktif")}><div style={styles.dashCardTitle}>Aktif İşlerim</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum !== "tamam").length}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981", cursor: "pointer" }} onClick={() => setDashboardFilter("tamamlanan")}><div style={styles.dashCardTitle}>Tamamladığım</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum === "tamam").length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Toplam İşim</div><div style={styles.dashCardValue}>{myTasks.length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B" }}><div style={styles.dashCardTitle}>Aktif İşlerim</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum !== "tamam").length}</div></div>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Tamamladığım</div><div style={styles.dashCardValue}>{myTasks.filter(t => t.durum === "tamam").length}</div></div>
         <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Geciken İşlerim</div><div style={styles.dashCardValue}>{overdueCount}</div></div>
       </div>
 
@@ -884,14 +903,33 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        {filtered.length === 0 && <div style={{ color: "#64748B", fontSize: 12 }}>Bu filtrede iş yok.</div>}
-        {filtered.map(t => (
-          <div key={t.id} style={styles.personalTaskCard} onClick={() => onOpenDetail(t)}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={styles.taskCodeBadge}>{t.kod}</span><span style={{ fontSize: 10, color: "#F59E0B" }}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</span></div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{t.baslik}</div>
-          </div>
-        ))}
+      <div>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>İşlerim (Aşamaya Göre)</h3>
+        <div style={styles.dashKanbanScroll}>
+          {KANBAN_STAGES.map(stage => {
+            const stageTasks = myTasks.filter(t => t.durum === stage.id);
+            return (
+              <div key={stage.id} style={styles.dashKanbanCol}>
+                <div style={{ ...styles.aracKanbanColHeader, borderTopColor: stage.color }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: stage.color }}>{stage.label}</span>
+                    <span style={styles.kanbanBadge}>{stageTasks.length}</span>
+                  </div>
+                </div>
+                <div style={styles.aracKanbanColBody}>
+                  {stageTasks.length === 0 && <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>}
+                  {stageTasks.map(t => (
+                    <div key={t.id} style={{ ...styles.aracVehCard, cursor: "pointer" }} onClick={() => onOpenDetail(t)}>
+                      <span style={styles.taskCodeBadge}>{t.kod}</span>
+                      <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>{t.baslik}</div>
+                      {t.vade && <div style={{ fontSize: 10, color: t.durum !== "tamam" && t.vade < today ? "#EF4444" : "#64748B", marginTop: 4 }}>{t.durum !== "tamam" && t.vade < today ? "⚠ " : ""}{fmtDate(t.vade)}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1086,18 +1124,33 @@ function NewReportModal({ currentUser, onClose, onCreate }) {
   );
 }
 
+function getAdvanceInfo(v) {
+  if (v.konum === "fabrika1") {
+    const idx = FABRIKA1_STAGES.indexOf(v.asama);
+    if (idx === -1) return null;
+    if (idx < FABRIKA1_STAGES.length - 1) return { label: "Sonraki Aşama", next: { konum: "fabrika1", asama: FABRIKA1_STAGES[idx + 1] } };
+    return { label: "Depoya Sevk Et", next: { konum: "depo", asama: DEPO_STAGES[0] } };
+  }
+  const idx = DEPO_STAGES.indexOf(v.asama);
+  if (idx === -1 || idx >= DEPO_STAGES.length - 1) return null;
+  const nextStage = DEPO_STAGES[idx + 1];
+  return { label: nextStage === "Serbestlik" ? "Serbestliğe Sevk Et" : "Sonraki Aşama", next: { konum: "depo", asama: nextStage } };
+}
+
 function ReportDetail({ report, onUpdate, onClose }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(report.baslik);
-  const [addingTo, setAddingTo] = useState(null); // "fabrika1" | "depo" | null
-  const [vehForm, setVehForm] = useState({ no: "", asama: "", detay: "", tarih: todayStr() });
+  const [addingTo, setAddingTo] = useState(null); // { konum, asama } | null
+  const [vehForm, setVehForm] = useState({ no: "", detay: "", tarih: todayStr() });
   const [editingVehId, setEditingVehId] = useState(null);
+  const [editForm, setEditForm] = useState({ no: "", asama: "", detay: "", tarih: "" });
   const [reworkFormFor, setReworkFormFor] = useState(null);
   const [reworkText, setReworkText] = useState("");
 
-  const fabrikaAraclar = (report.araclar || []).filter(a => a.konum === "fabrika1");
-  const depoAraclar = (report.araclar || []).filter(a => a.konum === "depo");
-  const serbestCount = (report.araclar || []).filter(a => a.asama === "Serbestlik").length;
+  const araclar = report.araclar || [];
+  const fabrikaCount = araclar.filter(a => a.konum === "fabrika1").length;
+  const depoCount = araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
+  const serbestCount = araclar.filter(a => a.asama === "Serbestlik").length;
 
   const saveTitle = () => {
     onUpdate({ ...report, baslik: titleDraft.trim() || report.baslik });
@@ -1106,41 +1159,46 @@ function ReportDetail({ report, onUpdate, onClose }) {
 
   const updateMeta = (patch) => onUpdate({ ...report, ...patch });
 
-  const openAddForm = (konum) => {
-    const stages = konum === "fabrika1" ? FABRIKA1_STAGES : DEPO_STAGES;
-    setVehForm({ no: "", asama: stages[0], detay: "", tarih: todayStr() });
-    setAddingTo(konum);
+  const openAddForm = (konum, asama) => {
+    setVehForm({ no: "", detay: "", tarih: todayStr() });
+    setAddingTo({ konum, asama });
     setEditingVehId(null);
   };
 
   const addVehicle = () => {
-    if (!vehForm.no.trim()) return;
-    const v = { id: uid(), no: vehForm.no.trim(), konum: addingTo, asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih, reworklar: [] };
-    onUpdate({ ...report, araclar: [...(report.araclar || []), v] });
+    if (!vehForm.no.trim() || !addingTo) return;
+    const v = { id: uid(), no: vehForm.no.trim(), konum: addingTo.konum, asama: addingTo.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih, reworklar: [] };
+    onUpdate({ ...report, araclar: [...araclar, v] });
     setAddingTo(null);
   };
 
   const openEditForm = (v) => {
-    setVehForm({ no: v.no, asama: v.asama, detay: v.detay, tarih: v.tarih });
+    setEditForm({ no: v.no, asama: v.asama, detay: v.detay, tarih: v.tarih });
     setEditingVehId(v.id);
     setAddingTo(null);
   };
 
   const saveEdit = () => {
-    onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === editingVehId ? { ...a, no: vehForm.no.trim(), asama: vehForm.asama, detay: vehForm.detay.trim(), tarih: vehForm.tarih } : a) });
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === editingVehId ? { ...a, no: editForm.no.trim(), asama: editForm.asama, detay: editForm.detay.trim(), tarih: editForm.tarih } : a) });
     setEditingVehId(null);
   };
 
-  const removeVehicle = (id) => onUpdate({ ...report, araclar: (report.araclar || []).filter(a => a.id !== id) });
+  const removeVehicle = (id) => onUpdate({ ...report, araclar: araclar.filter(a => a.id !== id) });
+
+  const advanceVehicle = (v) => {
+    const info = getAdvanceInfo(v);
+    if (!info) return;
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === v.id ? { ...a, konum: info.next.konum, asama: info.next.asama, tarih: todayStr() } : a) });
+  };
 
   const addRework = (vehId) => {
     if (!reworkText.trim()) return;
-    onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr() }] } : a) });
     setReworkText("");
     setReworkFormFor(null);
   };
 
-  const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: (report.araclar || []).map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
+  const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
 
   const exportPdf = () => {
     const prevTitle = document.title;
@@ -1171,102 +1229,113 @@ function ReportDetail({ report, onUpdate, onClose }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, margin: "16px 0", flexWrap: "wrap" }}>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Fabrika 1</div><div style={styles.dashCardValue}>{fabrikaAraclar.length}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Depo (İşlemde)</div><div style={styles.dashCardValue}>{depoAraclar.length - serbestCount}</div></div>
-        <div style={{ ...styles.dashCard, borderLeftColor: "#10B981", flex: "1 1 120px" }}><div style={styles.dashCardTitle}>Serbest Bırakılan</div><div style={styles.dashCardValue}>{serbestCount}</div></div>
-      </div>
+      <div style={{ display: "flex", gap: 16 }} className="no-print">
+        <div style={styles.vertStatRail}>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#94A3B8" }} /><div><div style={styles.vertStatValue}>{araclar.length}</div><div style={styles.vertStatLabel}>Toplam Araç</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#38BDF8" }} /><div><div style={styles.vertStatValue}>{fabrikaCount}</div><div style={styles.vertStatLabel}>Şubedeki (Fabrika 1)</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#F59E0B" }} /><div><div style={styles.vertStatValue}>{depoCount}</div><div style={styles.vertStatLabel}>Depodaki</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#10B981" }} /><div><div style={styles.vertStatValue}>{serbestCount}</div><div style={styles.vertStatLabel}>Serbest Kalan</div></div></div>
+        </div>
 
-      <VehicleLocationSection
-        title="Fabrika 1" color="#38BDF8" konum="fabrika1" stages={FABRIKA1_STAGES}
-        araclar={fabrikaAraclar} addingTo={addingTo} vehForm={vehForm} setVehForm={setVehForm}
-        editingVehId={editingVehId} reworkFormFor={reworkFormFor} setReworkFormFor={setReworkFormFor}
-        reworkText={reworkText} setReworkText={setReworkText}
-        onOpenAdd={() => openAddForm("fabrika1")} onCancelAdd={() => setAddingTo(null)} onAdd={addVehicle}
-        onOpenEdit={openEditForm} onCancelEdit={() => setEditingVehId(null)} onSaveEdit={saveEdit}
-        onRemove={removeVehicle} onAddRework={addRework} onRemoveRework={removeRework}
-      />
-
-      <VehicleLocationSection
-        title="Depo" color="#F59E0B" konum="depo" stages={DEPO_STAGES}
-        araclar={depoAraclar} addingTo={addingTo} vehForm={vehForm} setVehForm={setVehForm}
-        editingVehId={editingVehId} reworkFormFor={reworkFormFor} setReworkFormFor={setReworkFormFor}
-        reworkText={reworkText} setReworkText={setReworkText}
-        onOpenAdd={() => openAddForm("depo")} onCancelAdd={() => setAddingTo(null)} onAdd={addVehicle}
-        onOpenEdit={openEditForm} onCancelEdit={() => setEditingVehId(null)} onSaveEdit={saveEdit}
-        onRemove={removeVehicle} onAddRework={addRework} onRemoveRework={removeRework}
-      />
-    </div>
-  );
-}
-
-function VehicleLocationSection({ title, color, konum, stages, araclar, addingTo, vehForm, setVehForm, editingVehId, reworkFormFor, setReworkFormFor, reworkText, setReworkText, onOpenAdd, onCancelAdd, onAdd, onOpenEdit, onCancelEdit, onSaveEdit, onRemove, onAddRework, onRemoveRework }) {
-  return (
-    <div style={{ marginBottom: 22 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #334155", paddingBottom: 6, marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color }}>{title} ({araclar.length})</span>
-        <button style={styles.addChipBtnSolid} className="no-print" onClick={onOpenAdd}><Plus size={12} /> Araç Ekle</button>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {araclar.length === 0 && <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>Bu konumda kayıtlı araç yok.</div>}
-        {araclar.map(v => (
-          editingVehId === v.id ? (
-            <div key={v.id} style={styles.reportAddForm} className="no-print">
-              <input style={{ ...styles.mainInput, maxWidth: 80 }} value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} />
-              <select style={{ ...styles.selectInput, maxWidth: 160 }} value={vehForm.asama} onChange={e => setVehForm(f => ({ ...f, asama: e.target.value }))}>
-                {stages.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input style={styles.mainInput} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
-              <input type="date" style={{ ...styles.mainInput, maxWidth: 140 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
-              <button style={styles.addInlineBtn} onClick={onSaveEdit}>Kaydet</button>
-              <button style={styles.ghostBtn} onClick={onCancelEdit}>Vazgeç</button>
-            </div>
-          ) : (
-            <div key={v.id}>
-              <div style={styles.reportRow}>
-                <span style={styles.reportRowNo}>#{v.no}</span>
-                <span style={{ fontSize: 11, color, whiteSpace: "nowrap", fontWeight: 700 }}>{v.asama}</span>
-                <span style={{ flex: 1 }}>{v.detay}</span>
-                <span style={{ fontSize: 11, color: "#94A3B8", whiteSpace: "nowrap" }}>{fmtDate(v.tarih)}</span>
-                <div className="no-print" style={{ display: "flex", gap: 6 }}>
-                  <Edit2 size={12} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => onOpenEdit(v)} />
-                  <button style={{ ...styles.editIconBtn, fontSize: 10, padding: 0 }} onClick={() => setReworkFormFor(reworkFormFor === v.id ? null : v.id)}>Rework</button>
-                  <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => onRemove(v.id)} />
+        <div style={styles.aracKanbanScroll}>
+          {ARAC_KANBAN_COLUMNS.map(col => {
+            const colVehicles = araclar.filter(a => a.konum === col.konum && a.asama === col.asama);
+            const color = KONUM_META[col.konum].color;
+            const colKey = `${col.konum}-${col.asama}`;
+            return (
+              <div key={colKey} style={styles.aracKanbanCol}>
+                <div style={{ ...styles.aracKanbanColHeader, borderTopColor: color }}>
+                  <div style={{ fontSize: 9, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>{KONUM_META[col.konum].label}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color }}>{col.asama}</span>
+                    <span style={styles.kanbanBadge}>{colVehicles.length}</span>
+                  </div>
+                </div>
+                <div style={styles.aracKanbanColBody}>
+                  <button style={styles.aracAddColBtn} onClick={() => openAddForm(col.konum, col.asama)}><Plus size={11} /> Araç Ekle</button>
+                  {addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama && (
+                    <div style={styles.aracVehCard}>
+                      <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} autoFocus />
+                      <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
+                      <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
+                      <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                        <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={addVehicle}>Ekle</button>
+                        <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setAddingTo(null)}>Vazgeç</button>
+                      </div>
+                    </div>
+                  )}
+                  {colVehicles.map(v => {
+                    const advance = getAdvanceInfo(v);
+                    return editingVehId === v.id ? (
+                      <div key={v.id} style={styles.aracVehCard}>
+                        <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} value={editForm.no} onChange={e => setEditForm(f => ({ ...f, no: e.target.value }))} />
+                        <select style={{ ...styles.selectInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.asama} onChange={e => setEditForm(f => ({ ...f, asama: e.target.value }))}>
+                          {(v.konum === "fabrika1" ? FABRIKA1_STAGES : DEPO_STAGES).map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={editForm.detay} onChange={e => setEditForm(f => ({ ...f, detay: e.target.value }))} />
+                        <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.tarih} onChange={e => setEditForm(f => ({ ...f, tarih: e.target.value }))} />
+                        <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                          <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={saveEdit}>Kaydet</button>
+                          <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setEditingVehId(null)}>Vazgeç</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={v.id} style={styles.aracVehCard}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={styles.reportRowNo}>#{v.no}</span>
+                          <div style={{ display: "flex", gap: 5 }}>
+                            <Edit2 size={11} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => openEditForm(v)} />
+                            <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeVehicle(v.id)} />
+                          </div>
+                        </div>
+                        {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
+                        <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
+                        {(v.reworklar || []).map(rw => (
+                          <div key={rw.id} style={{ fontSize: 10, color: "#FCA5A5", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                            🔧 {rw.text} <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => removeRework(v.id, rw.id)} />
+                          </div>
+                        ))}
+                        {reworkFormFor === v.id ? (
+                          <div style={{ display: "flex", gap: 4, marginTop: 5 }}>
+                            <input style={{ ...styles.mainInput, fontSize: 10, padding: "4px 6px" }} placeholder="Rework açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
+                            <button style={{ ...styles.addInlineBtn, fontSize: 10, padding: "0 8px" }} onClick={() => addRework(v.id)}>Ekle</button>
+                          </div>
+                        ) : (
+                          <button style={styles.aracReworkBtn} onClick={() => setReworkFormFor(v.id)}>+ Rework</button>
+                        )}
+                        {advance && (
+                          <button style={styles.aracAdvanceBtn} onClick={() => advanceVehicle(v)}>{advance.label} <ArrowRight size={11} /></button>
+                        )}
+                        {!advance && v.asama === "Serbestlik" && <div style={styles.aracServeBadge}>✓ Serbest — müşteriye gidebilir</div>}
+                      </div>
+                    );
+                  })}
+                  {colVehicles.length === 0 && !(addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama) && (
+                    <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>
+                  )}
                 </div>
               </div>
-              {(v.reworklar || []).length > 0 && (
-                <div style={{ marginLeft: 54, marginTop: 3, display: "flex", flexDirection: "column", gap: 3 }}>
-                  {v.reworklar.map(rw => (
-                    <div key={rw.id} style={{ fontSize: 11, color: "#FCA5A5", display: "flex", gap: 6, alignItems: "center" }}>
-                      🔧 {rw.text} <span style={{ color: "#64748B" }}>({fmtDate(rw.tarih)})</span>
-                      <X size={10} className="no-print" style={{ cursor: "pointer" }} onClick={() => onRemoveRework(v.id, rw.id)} />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {reworkFormFor === v.id && (
-                <div style={{ marginLeft: 54, marginTop: 4, display: "flex", gap: 6 }} className="no-print">
-                  <input style={{ ...styles.mainInput, fontSize: 11 }} placeholder="Rework / tamir açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
-                  <button style={styles.addInlineBtn} onClick={() => onAddRework(v.id)}>Ekle</button>
-                </div>
-              )}
-            </div>
-          )
-        ))}
+            );
+          })}
+        </div>
+      </div>
 
-        {addingTo === konum && (
-          <div style={styles.reportAddForm} className="no-print">
-            <input style={{ ...styles.mainInput, maxWidth: 80 }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} />
-            <select style={{ ...styles.selectInput, maxWidth: 160 }} value={vehForm.asama} onChange={e => setVehForm(f => ({ ...f, asama: e.target.value }))}>
-              {stages.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <input style={styles.mainInput} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
-            <input type="date" style={{ ...styles.mainInput, maxWidth: 140 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
-            <button style={styles.addInlineBtn} onClick={onAdd}>Ekle</button>
-            <button style={styles.ghostBtn} onClick={onCancelAdd}>Vazgeç</button>
-          </div>
-        )}
+      {/* Sadece yazdırırken görünen sade tablo görünümü */}
+      <div className="print-only">
+        <table style={styles.table}>
+          <thead><tr><th style={styles.th}>No</th><th style={styles.th}>Konum</th><th style={styles.th}>Aşama</th><th style={styles.th}>Detay</th><th style={styles.th}>Tarih</th></tr></thead>
+          <tbody>
+            {araclar.map(v => (
+              <tr key={v.id} style={styles.tr}>
+                <td style={styles.td}>#{v.no}</td>
+                <td style={styles.td}>{KONUM_META[v.konum]?.label || v.konum}</td>
+                <td style={styles.td}>{v.asama}</td>
+                <td style={styles.td}>{v.detay}{(v.reworklar || []).length > 0 ? ` | Rework: ${v.reworklar.map(r => r.text).join("; ")}` : ""}</td>
+                <td style={styles.td}>{fmtDate(v.tarih)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1277,10 +1346,46 @@ function DetailedReportView({ tasks, modules }) {
   const [personFilter, setPersonFilter] = useState("hepsi");
   const [titleQuery, setTitleQuery] = useState("");
   const people = Array.from(new Set(tasks.map(t => t.sorumlu).filter(Boolean))).sort();
-  const filtered = tasks.filter(t =>
-    (personFilter === "hepsi" || t.sorumlu === personFilter) &&
-    (titleQuery.trim() === "" || t.baslik.toLowerCase().includes(titleQuery.trim().toLowerCase()))
+
+  const matchesTitle = (t) => titleQuery.trim() === "" || t.baslik.toLowerCase().includes(titleQuery.trim().toLowerCase());
+
+  const renderRows = (list) => list.map(t => (
+    <tr key={t.id} style={styles.tr}><td style={styles.td}>{t.kod}</td><td style={styles.tdTitle}>{t.baslik}</td><td style={styles.td}>{moduleLabel(t.module)}</td><td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.oncelik || "—"}</td><td style={styles.td}>{fmtDate(t.vade)}</td><td style={styles.td}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</td></tr>
+  ));
+
+  const tableHead = (
+    <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Modül</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Öncelik</th><th style={styles.th}>Vade</th><th style={styles.th}>Durum</th></tr></thead>
   );
+
+  let content;
+  if (personFilter === "hepsi") {
+    const filtered = tasks.filter(matchesTitle);
+    content = (
+      <div style={styles.yearEndTableCard} id="print-area">
+        <table style={styles.table}>{tableHead}<tbody>{renderRows(filtered)}</tbody></table>
+      </div>
+    );
+  } else {
+    // Bireysel: sorumlu alanı TAM OLARAK bu kişi. Kişilerle: sorumlu alanı
+    // bu kişiyi içeriyor ama başka isim(ler)le birlikte (örn. verideki
+    // birleşik "AhmetMehmet" gibi çoklu atamalar).
+    const bireysel = tasks.filter(t => t.sorumlu === personFilter && matchesTitle(t));
+    const kisilerle = tasks.filter(t => t.sorumlu !== personFilter && (t.sorumlu || "").includes(personFilter) && matchesTitle(t));
+    content = (
+      <div id="print-area">
+        <div style={{ ...styles.yearEndTableCard, marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>Bireysel Çalışmaları ({bireysel.length})</h3>
+          {bireysel.length === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Bireysel kayıt yok.</div> : <table style={styles.table}>{tableHead}<tbody>{renderRows(bireysel)}</tbody></table>}
+        </div>
+        <div style={styles.yearEndTableCard}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: "#38BDF8", marginBottom: 12 }}>Kişilerle Olan Çalışmaları ({kisilerle.length})</h3>
+          {kisilerle.length === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Ortak çalışma kaydı yok.</div> : <table style={styles.table}>{tableHead}<tbody>{renderRows(kisilerle)}</tbody></table>}
+        </div>
+      </div>
+    );
+  }
+
+  const totalShown = personFilter === "hepsi" ? tasks.filter(matchesTitle).length : tasks.filter(t => (t.sorumlu || "").includes(personFilter) && matchesTitle(t)).length;
 
   return (
     <div style={styles.viewContainer}>
@@ -1292,15 +1397,10 @@ function DetailedReportView({ tasks, modules }) {
           {people.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         <input style={{ ...styles.mainInput, maxWidth: 260 }} placeholder="Başlığa göre ara..." value={titleQuery} onChange={e => setTitleQuery(e.target.value)} />
-        <span style={{ fontSize: 11, color: "#94A3B8", alignSelf: "center" }}>{filtered.length} / {tasks.length} kayıt</span>
+        <span style={{ fontSize: 11, color: "#94A3B8", alignSelf: "center" }}>{totalShown} / {tasks.length} kayıt</span>
       </div>
 
-      <div style={styles.yearEndTableCard} id="print-area">
-        <table style={styles.table}>
-          <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Başlık</th><th style={styles.th}>Modül</th><th style={styles.th}>Sorumlu</th><th style={styles.th}>Öncelik</th><th style={styles.th}>Vade</th><th style={styles.th}>Durum</th></tr></thead>
-          <tbody>{filtered.map(t => (<tr key={t.id} style={styles.tr}><td style={styles.td}>{t.kod}</td><td style={styles.tdTitle}>{t.baslik}</td><td style={styles.td}>{moduleLabel(t.module)}</td><td style={styles.td}>{t.sorumlu}</td><td style={styles.td}>{t.oncelik || "—"}</td><td style={styles.td}>{fmtDate(t.vade)}</td><td style={styles.td}>{KANBAN_STAGES.find(s => s.id === t.durum)?.label || t.durum}</td></tr>))}</tbody>
-        </table>
-      </div>
+      {content}
     </div>
   );
 }
@@ -1609,6 +1709,22 @@ const styles = {
   reportRowNo: { fontFamily: "monospace", fontWeight: 800, color: "#F59E0B", flexShrink: 0, width: 44 },
   reportAddForm: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" },
   addChipBtnSolid: { display: "flex", alignItems: "center", gap: 4, background: "#212934", border: "1px solid #F59E0B", color: "#F59E0B", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" },
+  vertStatRail: { display: "flex", flexDirection: "column", gap: 14, minWidth: 170, flexShrink: 0, background: "#0F172A", border: "1px solid #334155", borderRadius: 12, padding: 16 },
+  vertStatItem: { display: "flex", alignItems: "center", gap: 10 },
+  vertStatDot: { width: 10, height: 10, borderRadius: 10, flexShrink: 0 },
+  vertStatValue: { fontSize: 18, fontWeight: 800 },
+  vertStatLabel: { fontSize: 10, color: "#94A3B8" },
+  aracKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", flex: 1, paddingBottom: 8 },
+  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, minWidth: 190, maxWidth: 190, flexShrink: 0, display: "flex", flexDirection: "column" },
+  aracKanbanColHeader: { borderTop: "3px solid", padding: "8px 10px 6px" },
+  aracKanbanColBody: { padding: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" },
+  aracAddColBtn: { background: "transparent", border: "1px dashed #334155", color: "#94A3B8", borderRadius: 6, padding: "5px 0", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 },
+  aracVehCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8 },
+  aracReworkBtn: { background: "transparent", border: "none", color: "#F59E0B", fontSize: 10, cursor: "pointer", padding: "4px 0", textAlign: "left" },
+  aracAdvanceBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 6, background: "#212934", border: "1px solid #10B981", color: "#10B981", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer" },
+  aracServeBadge: { marginTop: 6, fontSize: 10, color: "#10B981", fontWeight: 700, textAlign: "center" },
+  dashKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 },
+  dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, minWidth: 210, maxWidth: 210, flexShrink: 0, display: "flex", flexDirection: "column" },
   quickActionBtn: { display: "flex", alignItems: "center", gap: 6, background: "#1E293B", border: "1px solid #334155", color: "#CBD5E1", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" },
   personalTaskCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 16, cursor: "pointer" },
   kanbanGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 },
@@ -1652,6 +1768,7 @@ const styles = {
   drawerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, borderBottom: "1px solid #334155" },
   drawerBody: { padding: "16px 0", display: "flex", flexDirection: "column", gap: 12 },
   closeBtn: { background: "transparent", border: "none", color: "#94A3B8", cursor: "pointer" },
+  unauthorizedBox: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "80px 20px", color: "#94A3B8", textAlign: "center" },
   subtaskSection: { background: "#0F172A", padding: 12, borderRadius: 10 },
   subtaskRowInteractive: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" },
   addInlineBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "6px 12px", borderRadius: 6, fontWeight: 700, cursor: "pointer" },
