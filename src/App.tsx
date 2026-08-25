@@ -58,6 +58,31 @@ const ARAC_KANBAN_COLUMNS = [
   ...DEPO_STAGES.map((asama) => ({ konum: "depo", asama })),
 ];
 
+// Sol menüdeki "Toplantı Yönetimi" grubunun altında toplanan modüller —
+// bunlar hâlâ normal modül/Kanban sistemidir, sadece menüde tek bir açılır
+// başlığın altında görünürler.
+const TOPLANTI_MODULE_IDS = ["asakai", "iyilestirme", "kalite_kontrol", "tedarik_kalite"];
+
+// Fabrika Kontrol / Depo Kontrol — form altyapısı henüz gelmedi, şimdilik
+// menüde yer tutucu sayfalar olarak duruyorlar. Formlar geldiğinde bu
+// listeler gerçek veri yapılarına dönüştürülecek.
+const FABRIKA_KONTROL_ITEMS = [
+  { id: "fk-istasyon-1", label: "İstasyon Kontrol 1" },
+  { id: "fk-istasyon-2", label: "İstasyon Kontrol 2" },
+  { id: "fk-istasyon-3", label: "İstasyon Kontrol 3" },
+  { id: "fk-istasyon-4", label: "İstasyon Kontrol 4" },
+  { id: "fk-istasyon-5", label: "İstasyon Kontrol 5" },
+  { id: "fk-istasyon-6", label: "İstasyon Kontrol 6" },
+  { id: "fk-eol", label: "EOL Kontrol" },
+  { id: "fk-ee", label: "EE Kontrol" },
+  { id: "fk-suruş", label: "Sürüş Testi" },
+];
+const DEPO_KONTROL_ITEMS = [
+  { id: "dk-suruş", label: "Sürüş Testi" },
+  { id: "dk-sizdirmazlik", label: "Sızdırmazlık Testi" },
+  { id: "dk-ee", label: "EE Kontrol" },
+  { id: "dk-final", label: "Final Kontrol" },
+];
 
 // Örnek/demo kullanıcılar (Ahmet Yılmaz, Selin Yıldız) kaldırıldı. Sistem
 // artık sadece admin hesabıyla başlıyor; gerçek ekip üyeleri Admin
@@ -277,6 +302,19 @@ const dayOfYear = () => {
   return Math.floor(diff / 86400000);
 };
 
+function NavGroup({ label, icon: Icon, isOpen, onToggle, children }) {
+  return (
+    <div>
+      <button style={styles.navGroupHeader} onClick={onToggle}>
+        <Icon size={15} color="#94A3B8" />
+        <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
+        <ChevronDown size={13} color="#64748B" style={{ transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }} />
+      </button>
+      {isOpen && <div style={styles.navGroupBody}>{children}</div>}
+    </div>
+  );
+}
+
 export default function App() {
   // Bu beş liste artık ekibin TAMAMI arasında paylaşılıyor: hepsi tek bir
   // Firestore dokümanında (app_data/shared) tutuluyor ve onSnapshot ile
@@ -303,6 +341,8 @@ export default function App() {
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
   const [activeModule, setActiveModule] = useState("dashboard");
+  const [navExpanded, setNavExpanded] = useState({ toplanti: false, fabrika: false, depo: false });
+  const toggleNavGroup = (key) => setNavExpanded(prev => ({ ...prev, [key]: !prev[key] }));
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -520,10 +560,10 @@ export default function App() {
 
   return (
     <div style={styles.appShell}>
-      <header style={styles.header} className="no-print">
-        <div style={styles.brand}>
-          <div style={styles.logoIcon}><ShieldCheck size={24} color="#F59E0B" /></div>
-          <div><div style={styles.brandName}>Karea Asistan</div><div style={styles.brandSub}>Süreç & Yetki Yönetim Paneli</div></div>
+      <aside style={styles.sidebar} className="no-print">
+        <div style={styles.sidebarBrand}>
+          <div style={styles.logoIcon}><ShieldCheck size={22} color="#F59E0B" /></div>
+          <div><div style={styles.brandName}>Karea Asistan</div><div style={styles.brandSub}>Süreç & Yetki Yönetimi</div></div>
         </div>
 
         <nav style={styles.navTabs}>
@@ -532,7 +572,10 @@ export default function App() {
           {(currentUser.role === "admin" || currentUser.canViewReports) && (
             <button style={{ ...styles.navTab, ...(activeModule === "raporlar" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("raporlar")}><FileSpreadsheet size={15} color="#10B981" /><span>Araç Akış Takibi</span></button>
           )}
-          {modules.map((m) => {
+          <div style={styles.navDivider} />
+
+          {/* Kalite Güvence tek başına üst seviyede */}
+          {modules.filter(m => !TOPLANTI_MODULE_IDS.includes(m.id)).map((m) => {
             const Icon = MODULE_META[m.id]?.icon || ShieldCheck;
             const modColor = MODULE_META[m.id]?.color || "#94A3B8";
             const isActive = activeModule === m.id;
@@ -542,26 +585,63 @@ export default function App() {
               </button>
             );
           })}
-          <button style={{ ...styles.navTab, ...(activeModule === "detayli_rapor" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("detayli_rapor")}><FileText size={15} color="#38BDF8" /><span>Detaylı Rapor</span></button>
+
+          {/* Toplantı Yönetimi — açılır grup */}
+          <NavGroup label="Toplantı Yönetimi" icon={Users} isOpen={navExpanded.toplanti} onToggle={() => toggleNavGroup("toplanti")}>
+            {modules.filter(m => TOPLANTI_MODULE_IDS.includes(m.id)).map((m) => {
+              const Icon = MODULE_META[m.id]?.icon || ShieldCheck;
+              const modColor = MODULE_META[m.id]?.color || "#94A3B8";
+              const isActive = activeModule === m.id;
+              return (
+                <button key={m.id} style={{ ...styles.navSubTab, ...(isActive ? styles.navTabActive : {}) }} onClick={() => setActiveModule(m.id)}>
+                  <Icon size={13} color={isActive ? "#F59E0B" : modColor} /><span>{m.label}</span>
+                </button>
+              );
+            })}
+          </NavGroup>
+
+          {/* Fabrika Kontrol — açılır grup (form altyapısı yakında) */}
+          <NavGroup label="Fabrika Kontrol" icon={Zap} isOpen={navExpanded.fabrika} onToggle={() => toggleNavGroup("fabrika")}>
+            {FABRIKA_KONTROL_ITEMS.map((item) => (
+              <button key={item.id} style={{ ...styles.navSubTab, ...(activeModule === item.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(item.id)}>
+                <CheckSquare size={13} color={activeModule === item.id ? "#F59E0B" : "#94A3B8"} /><span>{item.label}</span>
+              </button>
+            ))}
+          </NavGroup>
+
+          {/* Depo Kontrol — açılır grup (form altyapısı yakında) */}
+          <NavGroup label="Depo Kontrol" icon={Truck} isOpen={navExpanded.depo} onToggle={() => toggleNavGroup("depo")}>
+            {DEPO_KONTROL_ITEMS.map((item) => (
+              <button key={item.id} style={{ ...styles.navSubTab, ...(activeModule === item.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(item.id)}>
+                <CheckSquare size={13} color={activeModule === item.id ? "#F59E0B" : "#94A3B8"} /><span>{item.label}</span>
+              </button>
+            ))}
+          </NavGroup>
+
+          <div style={styles.navDivider} />
+          <button style={{ ...styles.navTab, ...(activeModule === "grafik_yonetimi" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("grafik_yonetimi")}><BarChart3 size={15} color="#38BDF8" /><span>Grafik Yönetimi</span></button>
           {currentUser.role === "admin" && (
             <button style={{ ...styles.navTab, ...(activeModule === "admin_panel" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin_panel")}><Lock size={15} color="#EF4444" /><span>Admin Panel</span></button>
           )}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+        <div style={styles.sidebarFooter}>
           <button style={styles.notificationBellBtn} onClick={() => setShowNotificationsModal(true)} title="Bildirimler">
-            <Bell size={18} color="#F59E0B" />{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
+            <Bell size={16} color="#F59E0B" /> <span style={{ fontSize: 12 }}>Bildirimler</span>{unreadCount > 0 && <span style={styles.notificationBadge}>{unreadCount}</span>}
           </button>
           <div style={styles.userProfileBar}>
-            <div style={{ textAlign: "right" }}><div style={styles.userName}>{currentUser.name}</div><div style={styles.userRoleTag}>{currentUser.role === "admin" ? "🔑 Admin" : "👤 Kullanıcı"}</div></div>
             <div style={styles.userAvatar}>{currentUser.name.charAt(0)}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: 4 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...styles.userName, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUser.name}</div>
+              <div style={styles.userRoleTag}>{currentUser.role === "admin" ? "🔑 Admin" : "👤 Kullanıcı"}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <button style={styles.actionSmallBtn} onClick={() => setShowPasswordModal(true)} title="Şifre Değiştir"><Key size={14} color="#38BDF8" /></button>
                 <button style={styles.actionSmallBtn} onClick={() => { setCurrentUser(null); setIsLocked(false); }} title="Çıkış Yap"><LogOut size={14} color="#EF4444" /></button>
             </div>
           </div>
         </div>
-      </header>
+      </aside>
 
       <main style={styles.mainContent}>
         {activeModule === "dashboard" ? (
@@ -570,19 +650,26 @@ export default function App() {
           <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
         ) : activeModule === "raporlar" ? (
           (currentUser.role === "admin" || currentUser.canViewReports) ? <ReportsView reports={reports} setReports={setReports} currentUser={currentUser} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
-        ) : activeModule === "detayli_rapor" ? (
-          <DetailedReportView tasks={tasks} usersList={usersList} modules={modules} />
+        ) : activeModule === "grafik_yonetimi" ? (
+          <GrafikYonetimiView tasks={tasks} />
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} contacts={contacts} setContacts={setContacts} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
-        ) : (
+        ) : FABRIKA_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
+          <FormPlaceholderView title={FABRIKA_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Fabrika Kontrol" />
+        ) : DEPO_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
+          <FormPlaceholderView title={DEPO_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Depo Kontrol" />
+        ) : modules.some(m => m.id === activeModule) ? (
           <KanbanBoardView activeModule={activeModule} modules={modules} tasks={tasks.filter((t) => t.module === activeModule)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} currentUser={currentUser} onOpenDetail={setSelectedTask} onMoveStage={(id, st) => setTasks(tasks.map(t => t.id === id ? {...t, durum: st, bitisTarihi: st === "tamam" ? todayStr() : t.bitisTarihi} : t))} onCreateTask={(tData) => {
             const newId = uid();
             const prefix = (tData.module || "ask").substring(0, 3).toUpperCase();
-            const newTask = { id: newId, module: tData.module || "asakai", kod: `${prefix}-2026-${(tasks.length+1).toString().padStart(3,"0")}`, baslik: tData.baslik, sorumlu: tData.sorumlu || currentUser.name, gorevTipi: "bireysel", ekipUyeleri: [], acilisTarihi: todayStr(), vade: tData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] };
+            const newTask = { id: newId, module: tData.module || "asakai", kod: `${prefix}-2026-${(tasks.length+1).toString().padStart(3,"0")}`, baslik: tData.baslik, sorumlu: tData.sorumlu || currentUser.name, gorevTipi: "bireysel", ekipUyeleri: tData.ekipUyeleri || [], acilisTarihi: todayStr(), vade: tData.vade || todayStr(), bitisTarihi: "", durum: "acik", oncelik: "Orta", subtasks: [] };
             setTasks(prev => [...prev, newTask]);
             addContactIfNew(newTask.sorumlu);
+            newTask.ekipUyeleri.forEach(addContactIfNew);
             addNotification(newTask.sorumlu, `Yeni görev atandı: ${newTask.baslik}`);
-          }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} usersList={usersList} personOptions={personOptions} />
+          }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} usersList={usersList} contacts={contacts} personOptions={personOptions} />
+        ) : (
+          <DashboardView tasks={tasks} modules={modules} reports={reports} currentUser={currentUser} dashboardFilter={dashboardFilter} setDashboardFilter={setDashboardFilter} onOpenDetail={setSelectedTask} onNavigateModule={setActiveModule} />
         )}
       </main>
 
@@ -590,7 +677,7 @@ export default function App() {
       <ChatBar chats={chats} setChats={setChats} currentUser={currentUser} usersList={usersList} tasks={tasks} />
 
       {selectedTask && (
-        <TaskDetailModal task={selectedTask} currentUser={currentUser} personOptions={personOptions} onClose={() => setSelectedTask(null)} onSaveTask={(updated) => { setTasks(tasks.map(t => t.id === updated.id ? updated : t)); addContactIfNew(updated.sorumlu); }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} />
+        <TaskDetailModal task={selectedTask} currentUser={currentUser} usersList={usersList} contacts={contacts} personOptions={personOptions} onClose={() => setSelectedTask(null)} onSaveTask={(updated) => { setTasks(tasks.map(t => t.id === updated.id ? updated : t)); addContactIfNew(updated.sorumlu); (updated.ekipUyeleri || []).forEach(addContactIfNew); }} onDeleteTask={(id) => setTasks(tasks.filter(t => t.id !== id))} />
       )}
       {showPasswordModal && <ChangePasswordModal currentUser={currentUser} onClose={() => setShowPasswordModal(false)} onSaveUser={(updated) => setUsersList(usersList.map(u => u.id === updated.id ? updated : u))} />}
       {showNotificationsModal && <NotificationsModal notifications={myNotifications} onClose={() => setShowNotificationsModal(false)} onMarkAllRead={() => setNotifications(notifications.map(n => n.user === currentUser.name ? {...n, read: true} : n))} />}
@@ -731,24 +818,25 @@ function TodoListView({ todos, setTodos, currentUser }) {
         <div><h1 style={styles.viewTitle}>Kişisel Yapılacaklar (To-Do List)</h1><p style={styles.viewSub}>Notlarınızı, son tarihlerinizi ve ilerleme kayıtlarınızı buradan yönetin.</p></div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedId ? "1.2fr 1fr" : "1fr", gap: 20 }}>
-        <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-          <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <input style={{ ...styles.mainInput, flex: 3, minWidth: 160 }} placeholder="Yeni yapılacak iş..." value={newText} onChange={e => setNewText(e.target.value)} />
-            <input type="date" style={{ ...styles.selectInput, flex: 1, minWidth: 130 }} value={dueDate} onChange={e => setDueDate(e.target.value)} title="Son tarih (opsiyonel)" />
-            <select style={{ ...styles.selectInput, flex: 1, minWidth: 110 }} value={priority} onChange={e => setPriority(e.target.value)}>
-              <option value="Normal">Normal</option>
-              <option value="Yüksek">Yüksek ⚡</option>
-              <option value="Kritik">Kritik 🔥</option>
-            </select>
-            <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Ekle</button>
-          </form>
+      <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        <form onSubmit={handleAddTodo} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input style={{ ...styles.mainInput, flex: 3, minWidth: 160 }} placeholder="Yeni yapılacak iş..." value={newText} onChange={e => setNewText(e.target.value)} />
+          <input type="date" style={{ ...styles.selectInput, flex: 1, minWidth: 130 }} value={dueDate} onChange={e => setDueDate(e.target.value)} title="Son tarih (opsiyonel)" />
+          <select style={{ ...styles.selectInput, flex: 1, minWidth: 110 }} value={priority} onChange={e => setPriority(e.target.value)}>
+            <option value="Normal">Normal</option>
+            <option value="Yüksek">Yüksek ⚡</option>
+            <option value="Kritik">Kritik 🔥</option>
+          </select>
+          <button type="submit" style={styles.primaryActionBtn}><Plus size={16} /> Ekle</button>
+        </form>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 450, overflowY: "auto" }}>
-            {myTodos.length === 0 ? <div style={{ color: "#64748B", textAlign: "center", padding: 30 }}>Henüz To-Do kaydınız yok.</div> : myTodos.map(t => {
-              const isLate = t.dueDate && !t.done && t.dueDate < today;
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: selectedId === t.id ? "#334155" : "#0F172A", padding: "12px 16px", borderRadius: 10, border: isLate ? "1px solid #EF4444" : "1px solid #334155" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 650, overflowY: "auto" }}>
+          {myTodos.length === 0 ? <div style={{ color: "#64748B", textAlign: "center", padding: 30 }}>Henüz To-Do kaydınız yok.</div> : myTodos.map(t => {
+            const isLate = t.dueDate && !t.done && t.dueDate < today;
+            const isOpen = selectedId === t.id;
+            return (
+              <div key={t.id} style={{ background: "#0F172A", borderRadius: 10, border: isLate ? "1px solid #EF4444" : (isOpen ? "1px solid #F59E0B" : "1px solid #334155"), overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", flex: 1, minWidth: 0 }} onClick={() => setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x))}>
                     {t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}
                     <div style={{ minWidth: 0 }}>
@@ -756,79 +844,77 @@ function TodoListView({ todos, setTodos, currentUser }) {
                       <div style={{ display: "flex", gap: 8, marginTop: 3, alignItems: "center" }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: priorityColor(t.priority) }}>{t.priority}</span>
                         {t.dueDate && <span style={{ fontSize: 10, color: isLate ? "#EF4444" : "#94A3B8" }}>📅 {fmtDate(t.dueDate)}{isLate ? " (gecikti)" : ""}</span>}
+                        {(t.subtasks || []).length > 0 && <span style={{ fontSize: 10, color: "#64748B" }}>· {t.subtasks.filter(s => s.done).length}/{t.subtasks.length} alt adım</span>}
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <button style={styles.editIconBtn} onClick={() => setSelectedId(selectedId === t.id ? null : t.id)}>{selectedId === t.id ? "Kapat" : "Detay"}</button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                    <button style={{ ...styles.editIconBtn, display: "flex", alignItems: "center", gap: 3 }} onClick={() => setSelectedId(isOpen ? null : t.id)}>
+                      {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Detay
+                    </button>
                     <button style={styles.deleteIconBtn} onClick={() => setTodos(todos.filter(x => x.id !== t.id))}><Trash2 size={14} /></button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {activeTodo && (
-          <div style={{ background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #334155", paddingBottom: 10 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, color: "#F59E0B" }}>To-Do Detayı</h3>
-              <button style={styles.closeBtn} onClick={() => setSelectedId(null)}><X size={16} /></button>
-            </div>
+                {isOpen && (
+                  <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12, borderTop: "1px solid #1E293B", marginTop: 2, paddingTop: 14 }}>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={styles.inputLabel}>Son Tarih</label>
+                        <input type="date" style={styles.selectInput} value={t.dueDate || ""} onChange={e => setTodos(todos.map(x => x.id === t.id ? {...x, dueDate: e.target.value} : x))} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={styles.inputLabel}>Öncelik</label>
+                        <select style={styles.selectInput} value={t.priority} onChange={e => setTodos(todos.map(x => x.id === t.id ? {...x, priority: e.target.value} : x))}>
+                          <option value="Normal">Normal</option>
+                          <option value="Yüksek">Yüksek ⚡</option>
+                          <option value="Kritik">Kritik 🔥</option>
+                        </select>
+                      </div>
+                    </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label style={styles.inputLabel}>Son Tarih</label>
-                <input type="date" style={styles.selectInput} value={activeTodo.dueDate || ""} onChange={e => setTodos(todos.map(t => t.id === activeTodo.id ? {...t, dueDate: e.target.value} : t))} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.inputLabel}>Öncelik</label>
-                <select style={styles.selectInput} value={activeTodo.priority} onChange={e => setTodos(todos.map(t => t.id === activeTodo.id ? {...t, priority: e.target.value} : t))}>
-                  <option value="Normal">Normal</option>
-                  <option value="Yüksek">Yüksek ⚡</option>
-                  <option value="Kritik">Kritik 🔥</option>
-                </select>
-              </div>
-            </div>
+                    <div style={{ background: "#1E293B", padding: 12, borderRadius: 10 }}>
+                      <label style={styles.inputLabel}>Alt Adımlar</label>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        <input style={styles.mainInput} placeholder="Alt adım..." value={subText} onChange={e => setSubText(e.target.value)} />
+                        <button style={styles.addInlineBtn} onClick={() => { if(!subText.trim()) return; setTodos(todos.map(x => x.id === t.id ? {...x, subtasks: [...(x.subtasks||[]), {id: uid(), text: subText.trim(), done: false}]} : x)); setSubText(""); }}>Ekle</button>
+                      </div>
+                      {(t.subtasks || []).map(s => (
+                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", background: "#0F172A", padding: "6px 8px", borderRadius: 6, fontSize: 12, marginBottom: 4 }}>
+                          <span onClick={() => setTodos(todos.map(x => x.id === t.id ? {...x, subtasks: x.subtasks.map(s2 => s2.id === s.id ? {...s2, done: !s2.done} : s2)} : x))} style={{ textDecoration: s.done ? "line-through" : "none", cursor: "pointer" }}>{s.text}</span>
+                          <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => setTodos(todos.map(x => x.id === t.id ? {...x, subtasks: x.subtasks.filter(s2 => s2.id !== s.id)} : x))} />
+                        </div>
+                      ))}
+                    </div>
 
-            <div style={{ background: "#0F172A", padding: 12, borderRadius: 10 }}>
-              <label style={styles.inputLabel}>Alt Adımlar</label>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input style={styles.mainInput} placeholder="Alt adım..." value={subText} onChange={e => setSubText(e.target.value)} />
-                <button style={styles.addInlineBtn} onClick={() => { if(!subText.trim()) return; setTodos(todos.map(t => t.id === activeTodo.id ? {...t, subtasks: [...(t.subtasks||[]), {id: uid(), text: subText.trim(), done: false}]} : t)); setSubText(""); }}>Ekle</button>
-              </div>
-              {(activeTodo.subtasks || []).map(s => (
-                <div key={s.id} style={{ display: "flex", justifyContent: "space-between", background: "#1E293B", padding: "6px 8px", borderRadius: 6, fontSize: 12, marginBottom: 4 }}>
-                  <span onClick={() => setTodos(todos.map(t => t.id === activeTodo.id ? {...t, subtasks: t.subtasks.map(x => x.id === s.id ? {...x, done: !x.done} : x)} : t))} style={{ textDecoration: s.done ? "line-through" : "none", cursor: "pointer" }}>{s.text}</span>
-                  <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => setTodos(todos.map(t => t.id === activeTodo.id ? {...t, subtasks: t.subtasks.filter(x => x.id !== s.id)} : t))} />
-                </div>
-              ))}
-            </div>
-
-            <div style={{ background: "#0F172A", padding: 12, borderRadius: 10 }}>
-              <label style={styles.inputLabel}>Gelişmeler (ilerleme notları)</label>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input style={styles.mainInput} placeholder="Bir ilerleme notu yazın..." value={devText} onChange={e => setDevText(e.target.value)} />
-                <button style={styles.addInlineBtn} onClick={() => {
-                  if (!devText.trim()) return;
-                  const entry = { id: uid(), text: devText.trim(), date: new Date().toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) };
-                  setTodos(todos.map(t => t.id === activeTodo.id ? { ...t, developments: [entry, ...(t.developments || [])] } : t));
-                  setDevText("");
-                }}>Ekle</button>
-              </div>
-              {(activeTodo.developments || []).length === 0 && <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>Henüz gelişme notu yok.</div>}
-              {(activeTodo.developments || []).map(d => (
-                <div key={d.id} style={{ background: "#1E293B", padding: "8px 10px", borderRadius: 6, fontSize: 12, marginBottom: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <span style={{ flex: 1 }}>{d.text}</span>
-                    <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer", flexShrink: 0, marginTop: 2 }} onClick={() => setTodos(todos.map(t => t.id === activeTodo.id ? {...t, developments: t.developments.filter(x => x.id !== d.id)} : t))} />
+                    <div style={{ background: "#1E293B", padding: 12, borderRadius: 10 }}>
+                      <label style={styles.inputLabel}>Gelişmeler (ilerleme notları)</label>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        <input style={styles.mainInput} placeholder="Bir ilerleme notu yazın..." value={devText} onChange={e => setDevText(e.target.value)} />
+                        <button style={styles.addInlineBtn} onClick={() => {
+                          if (!devText.trim()) return;
+                          const entry = { id: uid(), text: devText.trim(), date: new Date().toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) };
+                          setTodos(todos.map(x => x.id === t.id ? { ...x, developments: [entry, ...(x.developments || [])] } : x));
+                          setDevText("");
+                        }}>Ekle</button>
+                      </div>
+                      {(t.developments || []).length === 0 && <div style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>Henüz gelişme notu yok.</div>}
+                      {(t.developments || []).map(d => (
+                        <div key={d.id} style={{ background: "#0F172A", padding: "8px 10px", borderRadius: 6, fontSize: 12, marginBottom: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                            <span style={{ flex: 1 }}>{d.text}</span>
+                            <Trash2 size={12} color="#EF4444" style={{ cursor: "pointer", flexShrink: 0, marginTop: 2 }} onClick={() => setTodos(todos.map(x => x.id === t.id ? {...x, developments: x.developments.filter(d2 => d2.id !== d.id)} : x))} />
+                          </div>
+                          <div style={{ fontSize: 10, color: "#64748B", marginTop: 3 }}>{d.date}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 10, color: "#64748B", marginTop: 3 }}>{d.date}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -836,7 +922,8 @@ function TodoListView({ todos, setTodos, currentUser }) {
 
 // --- DİĞER EKRANLAR (DASHBOARD, KANBAN, RAPOR, ADMIN) ---
 function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, setDashboardFilter, onOpenDetail, onNavigateModule }) {
-  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name);
+  const myTasks = tasks.filter(t => t.sorumlu === currentUser.name || (t.ekipUyeleri || []).includes(currentUser.name));
+  const [expandedModule, setExpandedModule] = useState(null);
   const today = todayStr();
   const overdueCount = myTasks.filter(t => t.durum !== "tamam" && t.vade && t.vade < today).length;
   const teamActive = tasks.filter(t => t.durum !== "tamam").length;
@@ -885,27 +972,48 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
           <div><div style={{ fontSize: 11, color: "#94A3B8" }}>Aktif</div><div style={{ fontSize: 20, fontWeight: 800, color: "#F59E0B" }}>{teamActive}</div></div>
           <div><div style={{ fontSize: 11, color: "#94A3B8" }}>Tamamlanan</div><div style={{ fontSize: 20, fontWeight: 800, color: "#10B981" }}>{teamDone}</div></div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {modules.map(m => {
             const modTasks = tasks.filter(t => t.module === m.id);
             const modDone = modTasks.filter(t => t.durum === "tamam").length;
             const pct = modTasks.length ? Math.round((modDone / modTasks.length) * 100) : 0;
+            const isExpanded = expandedModule === m.id;
             return (
-              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => onNavigateModule(m.id)}>
-                <span style={{ fontSize: 12, width: 170, flexShrink: 0 }}>{m.label}</span>
-                <div style={{ flex: 1, background: "#0F172A", borderRadius: 6, height: 8, overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: MODULE_META[m.id]?.color || "#F59E0B" }} />
+              <div key={m.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 0" }} onClick={() => setExpandedModule(isExpanded ? null : m.id)}>
+                  <ChevronDown size={12} color="#64748B" style={{ transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, width: 160, flexShrink: 0 }}>{m.label}</span>
+                  <div style={{ flex: 1, background: "#0F172A", borderRadius: 6, height: 8, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: MODULE_META[m.id]?.color || "#F59E0B" }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: "#94A3B8", width: 90, textAlign: "right" }}>{modDone}/{modTasks.length} tamam</span>
                 </div>
-                <span style={{ fontSize: 11, color: "#94A3B8", width: 90, textAlign: "right" }}>{modDone}/{modTasks.length} tamam</span>
+                {isExpanded && (
+                  <div style={{ marginLeft: 22, marginTop: 6, marginBottom: 10, padding: 12, background: "#0F172A", borderRadius: 8, border: "1px solid #334155" }}>
+                    <div style={{ fontSize: 10, color: "#64748B", marginBottom: 8 }}>{m.label} — aşamaya göre tüm ekip dağılımı</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {KANBAN_STAGES.map(stage => {
+                        const count = modTasks.filter(t => t.durum === stage.id).length;
+                        return (
+                          <div key={stage.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
+                            <span style={{ color: stage.color, fontWeight: 600 }}>{stage.label}</span>
+                            <span style={{ color: "#E2E8F0", fontWeight: 700 }}>{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button style={{ ...styles.quickActionBtn, marginTop: 10, fontSize: 11, width: "100%", justifyContent: "center" }} onClick={() => onNavigateModule(m.id)}>Modüle Git <ArrowRight size={11} /></button>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      <div>
+      <div style={{ width: "100%" }}>
         <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 12 }}>İşlerim (Aşamaya Göre)</h3>
-        <div style={styles.dashKanbanScroll}>
+        <div style={{ ...styles.dashKanbanScroll, width: "100%" }}>
           {KANBAN_STAGES.map(stage => {
             const stageTasks = myTasks.filter(t => t.durum === stage.id);
             return (
@@ -935,7 +1043,7 @@ function DashboardView({ tasks, modules, reports, currentUser, dashboardFilter, 
   );
 }
 
-function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList, personOptions }) {
+function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQuery, currentUser, onOpenDetail, onMoveStage, onCreateTask, onDeleteTask, usersList, contacts, personOptions }) {
   const [showModal, setShowModal] = useState(false);
   const currentModObj = modules.find(m => m.id === activeModule) || modules[0];
   const CurrentModIcon = MODULE_META[currentModObj.id]?.icon || ShieldCheck;
@@ -963,7 +1071,7 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
                       <div style={styles.cardHeaderRow}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.deleteIconBtn} onClick={() => onDeleteTask(task.id)}><Trash2 size={12} /></button></div>
                       <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(task)}>{task.baslik}</div>
                       <div style={styles.kanbanCardFooter}>
-                        <span>👤 {task.sorumlu}</span>
+                        <span>👤 {task.sorumlu}{(task.ekipUyeleri || []).length > 0 ? ` +${task.ekipUyeleri.length}` : ""}</span>
                         <span style={isOverdue ? { color: "#EF4444", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 } : {}}>{isOverdue && <AlertTriangle size={11} />} 📅 {fmtDate(task.vade)}</span>
                       </div>
                     </div>
@@ -974,15 +1082,45 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
           );
         })}
       </div>
-      {showModal && <CreateTaskModal activeModule={activeModule} usersList={usersList} personOptions={personOptions} currentUser={currentUser} onClose={() => setShowModal(false)} onCreate={onCreateTask} />}
+      {showModal && <CreateTaskModal activeModule={activeModule} usersList={usersList} contacts={contacts} personOptions={personOptions} currentUser={currentUser} onClose={() => setShowModal(false)} onCreate={onCreateTask} />}
     </div>
   );
 }
 
-function CreateTaskModal({ activeModule, usersList, personOptions, currentUser, onClose, onCreate }) {
+function TeamPicker({ usersList, contacts, selected, onChange, excludeName }) {
+  const [tab, setTab] = useState("uyeler");
+  const members = usersList.map(u => u.name).filter(n => n !== excludeName);
+  const others = (contacts || []).filter(n => n !== excludeName);
+  const list = tab === "uyeler" ? members : others;
+  const toggle = (name) => {
+    if (selected.includes(name)) onChange(selected.filter(n => n !== name));
+    else onChange([...selected, name]);
+  };
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        <button type="button" style={{ ...styles.periodBtn, ...(tab === "uyeler" ? styles.periodBtnActive : {}) }} onClick={() => setTab("uyeler")}>Kayıtlı Üyeler</button>
+        <button type="button" style={{ ...styles.periodBtn, ...(tab === "diger" ? styles.periodBtnActive : {}) }} onClick={() => setTab("diger")}>Kayıtlı Olmayanlar</button>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 110, overflowY: "auto" }}>
+        {list.length === 0 && <span style={{ fontSize: 11, color: "#64748B", fontStyle: "italic" }}>{tab === "uyeler" ? "Başka kayıtlı üye yok." : "Henüz kayıtlı olmayan kişi yok."}</span>}
+        {list.map(name => (
+          <label key={name} style={{ ...styles.chip, cursor: "pointer", background: selected.includes(name) ? "rgba(245,158,11,0.15)" : "#0F172A", borderColor: selected.includes(name) ? "#F59E0B" : "#334155" }}>
+            <input type="checkbox" checked={selected.includes(name)} onChange={() => toggle(name)} />
+            {name}
+          </label>
+        ))}
+      </div>
+      {selected.length > 0 && <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 6 }}>Seçili: {selected.join(", ")}</div>}
+    </div>
+  );
+}
+
+function CreateTaskModal({ activeModule, usersList, contacts, personOptions, currentUser, onClose, onCreate }) {
   const [baslik, setBaslik] = useState("");
   const [sorumlu, setSorumlu] = useState(currentUser?.name || "");
   const [vade, setVade] = useState(todayStr());
+  const [ekip, setEkip] = useState([]);
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.createModalContent}>
@@ -994,18 +1132,23 @@ function CreateTaskModal({ activeModule, usersList, personOptions, currentUser, 
             <input style={styles.mainInput} list="kisi-listesi-yeni" value={sorumlu} onChange={e => setSorumlu(e.target.value)} placeholder="İsim yazın..." />
             <datalist id="kisi-listesi-yeni">{(personOptions || []).map(p => <option key={p} value={p} />)}</datalist>
           </div>
+          <div>
+            <label style={styles.inputLabel}>Ek Kişiler (opsiyonel)</label>
+            <TeamPicker usersList={usersList} contacts={contacts} selected={ekip} onChange={setEkip} excludeName={sorumlu} />
+          </div>
           <div><label style={styles.inputLabel}>Vade</label><input type="date" style={styles.selectInput} value={vade} onChange={e => setVade(e.target.value)} /></div>
-          <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module: activeModule }); onClose(); }}>Oluştur</button>
+          <button style={styles.primaryActionBtn} onClick={() => { if(!baslik) return; onCreate({ baslik, sorumlu, vade, module: activeModule, ekipUyeleri: ekip }); onClose(); }}>Oluştur</button>
         </div>
       </div>
     </div>
   );
 }
 
-function TaskDetailModal({ task, currentUser, personOptions, onClose, onSaveTask, onDeleteTask }) {
+function TaskDetailModal({ task, currentUser, usersList, contacts, personOptions, onClose, onSaveTask, onDeleteTask }) {
   const [subText, setSubText] = useState("");
   const [editTitle, setEditTitle] = useState(task.baslik);
   const [editSorumlu, setEditSorumlu] = useState(task.sorumlu);
+  const ekip = task.ekipUyeleri || [];
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.drawerContainer}>
@@ -1016,6 +1159,10 @@ function TaskDetailModal({ task, currentUser, personOptions, onClose, onSaveTask
             <label style={styles.inputLabel}>Sorumlu (üye olmayan biri de yazılabilir)</label>
             <input style={styles.mainInput} list="kisi-listesi-detay" value={editSorumlu} onChange={e => setEditSorumlu(e.target.value)} onBlur={() => onSaveTask({...task, sorumlu: editSorumlu})} />
             <datalist id="kisi-listesi-detay">{(personOptions || []).map(p => <option key={p} value={p} />)}</datalist>
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Ek Kişiler</label>
+            <TeamPicker usersList={usersList} contacts={contacts} selected={ekip} onChange={(next) => onSaveTask({ ...task, ekipUyeleri: next })} excludeName={editSorumlu} />
           </div>
           <select style={styles.selectInput} value={task.durum} onChange={e => onSaveTask({...task, durum: e.target.value})}>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
           <div style={styles.subtaskSection}>
@@ -1220,21 +1367,40 @@ function ReportDetail({ report, onUpdate, onClose }) {
   const depoAraclar = araclar.filter(a => a.konum === "depo" && a.asama !== "Serbestlik");
   const serbestAraclar = araclar.filter(a => a.asama === "Serbestlik");
 
-  const printGroup = (title, list, color) => (
+  const todayISO = todayStr();
+  const startOfWeekISO = (() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diff);
+    return monday.toISOString().slice(0, 10);
+  })();
+  const releasedToday = serbestAraclar.filter(a => a.tarih === todayISO).length;
+  const releasedThisWeek = serbestAraclar.filter(a => a.tarih >= startOfWeekISO && a.tarih <= todayISO).length;
+
+  const printGroup = (title, list, color, showDurum) => (
     <div style={{ marginBottom: 18 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color, marginBottom: 6, borderBottom: "1px solid #ccc", paddingBottom: 4 }}>{title} ({list.length})</div>
       {list.length === 0 ? (
         <div style={{ fontSize: 11, fontStyle: "italic" }}>Kayıt yok.</div>
       ) : (
         <table style={styles.table}>
-          <thead><tr><th style={styles.th}>No</th><th style={styles.th}>Aşama</th><th style={styles.th}>Detay</th><th style={styles.th}>Tarih</th></tr></thead>
+          <thead>
+            <tr>
+              <th style={styles.th}>Araç No</th>
+              {showDurum ? <th style={styles.th}>Serbest Tarihi</th> : <th style={styles.th}>Mevcut Aşama</th>}
+              <th style={styles.th}>Detay</th>
+              {showDurum && <th style={styles.th}>Durum</th>}
+            </tr>
+          </thead>
           <tbody>
             {list.map(v => (
               <tr key={v.id} style={styles.tr}>
-                <td style={styles.td}>#{v.no}</td>
-                <td style={styles.td}>{v.asama}</td>
+                <td style={styles.td}>Araç #{v.no}</td>
+                {showDurum ? <td style={styles.td}>{fmtDate(v.tarih)}</td> : <td style={styles.td}>{v.asama}</td>}
                 <td style={styles.td}>{v.detay}{(v.reworklar || []).length > 0 ? ` | Rework: ${v.reworklar.map(r => (r.done ? "[✓] " : "") + r.text).join("; ")}` : ""}</td>
-                <td style={styles.td}>{fmtDate(v.tarih)}</td>
+                {showDurum && <td style={styles.td}>Serbest (OK)</td>}
               </tr>
             ))}
           </tbody>
@@ -1270,7 +1436,10 @@ function ReportDetail({ report, onUpdate, onClose }) {
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#94A3B8" }} /><div><div style={styles.vertStatValue}>{araclar.length}</div><div style={styles.vertStatLabel}>Toplam Araç</div></div></div>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#38BDF8" }} /><div><div style={styles.vertStatValue}>{fabrikaCount}</div><div style={styles.vertStatLabel}>Fabrika 1</div></div></div>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#F59E0B" }} /><div><div style={styles.vertStatValue}>{depoCount}</div><div style={styles.vertStatLabel}>Depodaki</div></div></div>
-          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#10B981" }} /><div><div style={styles.vertStatValue}>{serbestCount}</div><div style={styles.vertStatLabel}>Serbest Kalan</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#10B981" }} /><div><div style={styles.vertStatValue}>{serbestCount}</div><div style={styles.vertStatLabel}>Serbest Kalan (Toplam)</div></div></div>
+          <div style={{ borderTop: "1px solid #1E293B", margin: "2px 0" }} />
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#34D399" }} /><div><div style={styles.vertStatValue}>{releasedToday}</div><div style={styles.vertStatLabel}>Bugün Serbest Kalan</div></div></div>
+          <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#6EE7B7" }} /><div><div style={styles.vertStatValue}>{releasedThisWeek}</div><div style={styles.vertStatLabel}>Bu Hafta Serbest Kalan</div></div></div>
         </div>
 
         <div style={styles.aracKanbanScroll}>
@@ -1282,8 +1451,8 @@ function ReportDetail({ report, onUpdate, onClose }) {
               <div
                 key={colKey}
                 style={styles.aracKanbanCol}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); const vehId = e.dataTransfer.getData("text/plain"); if (vehId) moveVehicleToColumn(vehId, col.konum, col.asama); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDrop={(e) => { e.preventDefault(); const vehId = e.dataTransfer.getData("text"); if (vehId) moveVehicleToColumn(vehId, col.konum, col.asama); }}
               >
                 <div style={{ ...styles.aracKanbanColHeader, borderTopColor: color }}>
                   <div style={{ fontSize: 9, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>{KONUM_META[col.konum].label}</div>
@@ -1326,7 +1495,7 @@ function ReportDetail({ report, onUpdate, onClose }) {
                         style={styles.aracVehCard}
                         className="hover-lift"
                         draggable
-                        onDragStart={(e) => e.dataTransfer.setData("text/plain", v.id)}
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text", v.id); }}
                         title="Başka bir aşamaya sürükleyip bırakabilirsiniz"
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1370,13 +1539,107 @@ function ReportDetail({ report, onUpdate, onClose }) {
         </div>
       </div>
 
-      {/* Sadece yazdırırken görünen, Fabrika 1 / Depo / Serbestlik olarak
-          gruplanmış sade görünüm — orijinal PDF rapor yapısıyla aynı. */}
+      {/* Sadece yazdırırken görünen sade görünüm — orijinal PDF rapor
+          yapısıyla (başlık + özet sayılar + akış satırı + 3 numaralı
+          bölüm) birebir aynı. */}
       <div className="print-only">
-        {printGroup("Fabrika 1", fabrikaAraclar, "#0369A1")}
-        {printGroup("Depo (İşlemde)", depoAraclar, "#B45309")}
-        {printGroup("Serbest Bırakılanlar", serbestAraclar, "#047857")}
+        <div style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 4 }}>{report.baslik.toUpperCase()}</div>
+        <div style={{ fontSize: 11, textAlign: "center", marginBottom: 14 }}>
+          Tarih: {fmtDate(report.tarih)} | Hazırlayan: {report.hazirlayan} | Bölüm: {report.bolum}
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, fontSize: 11, fontWeight: 700, marginBottom: 10, flexWrap: "wrap" }}>
+          <span>FABRİKA 1: {fabrikaAraclar.length} Araç</span>
+          <span>DEPO (İŞLEM/TEST/KONTROL): {depoAraclar.length} Araç</span>
+          <span>SERBEST BIRAKILAN: {serbestAraclar.length} Araç</span>
+          <span>TOPLAM TAKİP: {araclar.length} Araç</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, fontSize: 11, marginBottom: 10, flexWrap: "wrap" }}>
+          <span>Bugün Serbest Kalan: {releasedToday} Araç</span>
+          <span>Bu Hafta Serbest Kalan: {releasedThisWeek} Araç</span>
+        </div>
+        <div style={{ fontSize: 10, textAlign: "center", marginBottom: 18, fontStyle: "italic" }}>
+          KALİTE KONTROL STANDART AKIŞI (Fabrika 1): {FABRIKA1_STAGES.join(" ➔ ")} ➔ Depoya Sevk<br />
+          KALİTE KONTROL STANDART AKIŞI (Depo): {DEPO_STAGES.join(" ➔ ")}
+        </div>
+        {printGroup("1. Fabrika 1 Araçları", fabrikaAraclar, "#0369A1", false)}
+        {printGroup("2. Depodaki Araçlar (İşlem ve Rework Sürecindekiler)", depoAraclar, "#B45309", false)}
+        {printGroup("3. Serbest Bırakılan Araçlar", serbestAraclar, "#047857", true)}
       </div>
+    </div>
+  );
+}
+
+function FormPlaceholderView({ title, grup }) {
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div><h1 style={styles.viewTitle}>{title}</h1><p style={styles.viewSub}>{grup}</p></div>
+      </div>
+      <div style={{ ...styles.yearEndTableCard, textAlign: "center", padding: "60px 20px" }}>
+        <FileUp size={40} color="#475569" style={{ marginBottom: 14 }} />
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#CBD5E1", marginBottom: 6 }}>Form altyapısı henüz eklenmedi</div>
+        <div style={{ fontSize: 12, color: "#64748B", maxWidth: 380, margin: "0 auto" }}>
+          "{title}" için kontrol formu yakında entegre edilecek. Menü yapısı hazır — form geldiğinde bu sayfa gerçek veri girişine dönüşecek.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GrafikYonetimiView({ tasks }) {
+  const people = Array.from(new Set(tasks.flatMap(t => [t.sorumlu, ...(t.ekipUyeleri || [])]).filter(Boolean))).sort();
+  const [person, setPerson] = useState(people[0] || "");
+
+  const bireysel = tasks.filter(t => t.sorumlu === person && (t.ekipUyeleri || []).length === 0);
+  const grup = tasks.filter(t =>
+    (t.sorumlu === person && (t.ekipUyeleri || []).length > 0) ||
+    (t.ekipUyeleri || []).includes(person) ||
+    (t.sorumlu !== person && (t.sorumlu || "").includes(person))
+  );
+
+  const chartData = (list) => KANBAN_STAGES.map(s => ({ ...s, count: list.filter(t => t.durum === s.id).length }));
+  const bireyselData = chartData(bireysel);
+  const grupData = chartData(grup);
+  const maxCount = Math.max(1, ...bireyselData.map(d => d.count), ...grupData.map(d => d.count));
+
+  const renderChart = (data, total) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {data.map(d => (
+        <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 11, width: 110, flexShrink: 0, color: d.color }}>{d.label}</span>
+          <div style={{ flex: 1, background: "#0F172A", borderRadius: 6, height: 16, overflow: "hidden" }}>
+            <div style={{ width: `${(d.count / maxCount) * 100}%`, height: "100%", background: d.color, transition: "width 0.2s" }} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, width: 24, textAlign: "right" }}>{d.count}</span>
+        </div>
+      ))}
+      <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>Toplam: {total} kayıt</div>
+    </div>
+  );
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div><h1 style={styles.viewTitle}>Grafik Yönetimi</h1><p style={styles.viewSub}>Bir kişi seçin — bireysel ve grup çalışmaları ayrı grafiklerde görünsün.</p></div>
+      </div>
+
+      <select style={{ ...styles.selectInput, maxWidth: 280 }} value={person} onChange={e => setPerson(e.target.value)}>
+        {people.length === 0 && <option value="">Kayıtlı kişi yok</option>}
+        {people.map(p => <option key={p} value={p}>{p}</option>)}
+      </select>
+
+      {person && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 4 }}>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: "#F59E0B", marginBottom: 16 }}>Bireysel Çalışmaları</h3>
+            {renderChart(bireyselData, bireysel.length)}
+          </div>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: "#38BDF8", marginBottom: 16 }}>Grup Çalışmaları</h3>
+            {renderChart(grupData, grup.length)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1718,30 +1981,37 @@ function LoginScreen({ onLogin, onRegister, error, setError }) {
 }
 
 const styles = {
-  appShell: { fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0F172A", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "column" },
+  appShell: { fontFamily: "'Plus Jakarta Sans', sans-serif", background: "radial-gradient(circle at 15% 0%, #1a2440 0%, #0F172A 45%)", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "row" },
   header: { display: "flex", alignItems: "center", padding: "12px 24px", background: "linear-gradient(90deg, #1E293B 0%, #16202f 100%)", borderBottom: "2px solid #F59E0B", gap: 16, flexWrap: "wrap" },
+  sidebar: { width: 232, minWidth: 232, background: "linear-gradient(180deg, #1E293B 0%, #131b28 100%)", borderRight: "2px solid #F59E0B", display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 },
+  sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "20px 16px 16px" },
+  navDivider: { height: 1, background: "#334155", margin: "8px 4px" },
+  sidebarFooter: { padding: 12, borderTop: "1px solid #334155", display: "flex", flexDirection: "column", gap: 8 },
   brand: { display: "flex", alignItems: "center", gap: 10 },
   logoIcon: { background: "rgba(245, 158, 11, 0.15)", padding: 8, borderRadius: 10, display: "flex" },
   brandName: { fontWeight: 800, fontSize: 16, color: "#F59E0B" },
   brandSub: { fontSize: 10, color: "#94A3B8" },
-  navTabs: { display: "flex", gap: 6, background: "#0F172A", padding: 4, borderRadius: 10, flexWrap: "wrap" },
-  navTab: { display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 12, fontWeight: 600, cursor: "pointer" },
-  navTabActive: { background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B", border: "1px solid #F59E0B" },
-  navTabAdminActive: { background: "rgba(239, 68, 68, 0.2)", color: "#EF4444", border: "1px solid #EF4444" },
-  notificationBellBtn: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "pointer", position: "relative" },
+  navTabs: { display: "flex", flexDirection: "column", gap: 4, padding: "0 12px", flex: 1, overflowY: "auto" },
+  navTab: { display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", justifyContent: "flex-start", textAlign: "left" },
+  navTabActive: { background: "rgba(245, 158, 11, 0.15)", color: "#F59E0B", border: "1px solid #F59E0B" },
+  navTabAdminActive: { background: "rgba(239, 68, 68, 0.15)", color: "#EF4444", border: "1px solid #EF4444" },
+  navGroupHeader: { display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, border: "none", background: "transparent", color: "#94A3B8", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%" },
+  navGroupBody: { display: "flex", flexDirection: "column", gap: 2, paddingLeft: 14, marginTop: 2, marginBottom: 4, borderLeft: "1px solid #334155" },
+  navSubTab: { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, border: "none", background: "transparent", color: "#94A3B8", fontSize: 12, fontWeight: 500, cursor: "pointer", width: "100%", justifyContent: "flex-start", textAlign: "left" },
+  notificationBellBtn: { background: "#0F172A", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", cursor: "pointer", position: "relative", display: "flex", alignItems: "center", gap: 8, color: "#F8FAFC", width: "100%" },
   notificationBadge: { position: "absolute", top: -4, right: -4, background: "#EF4444", color: "#FFF", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: "50%" },
-  userProfileBar: { display: "flex", alignItems: "center", gap: 10, background: "#0F172A", padding: "6px 12px", borderRadius: 10, border: "1px solid #334155" },
-  userAvatar: { width: 32, height: 32, borderRadius: "50%", background: "#F59E0B", color: "#0F172A", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" },
+  userProfileBar: { display: "flex", alignItems: "center", gap: 8, background: "#0F172A", padding: "8px 10px", borderRadius: 10, border: "1px solid #334155" },
+  userAvatar: { width: 30, height: 30, borderRadius: "50%", background: "#F59E0B", color: "#0F172A", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   userName: { fontSize: 12, fontWeight: 700 },
   userRoleTag: { fontSize: 10, color: "#F59E0B" },
   actionSmallBtn: { background: "transparent", border: "none", cursor: "pointer" },
   errorBar: { background: "rgba(239, 68, 68, 0.2)", padding: 8, color: "#FCA5A5", fontSize: 12, textAlign: "center", borderRadius: 6 },
-  mainContent: { flex: 1, padding: "20px 24px", overflowY: "auto" },
+  mainContent: { flex: 1, minWidth: 0, padding: "24px 28px", overflowY: "auto", height: "100vh" },
   viewContainer: { display: "flex", flexDirection: "column", gap: 20 },
   dashboardCardGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 },
-  dashCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 12, padding: 16, borderLeft: "4px solid" },
+  dashCard: { background: "linear-gradient(155deg, #212f47 0%, #1A2536 60%)", border: "1px solid #334155", borderRadius: 12, padding: 16, borderLeft: "4px solid" },
   dashCardTitle: { fontSize: 11, color: "#94A3B8", fontWeight: 600 },
-  dashCardValue: { fontSize: 24, fontWeight: 800, marginTop: 6, color: "#F59E0B" },
+  dashCardValue: { fontSize: 24, fontWeight: 800, marginTop: 6, color: "#F59E0B", textShadow: "0 0 18px rgba(245, 158, 11, 0.35)" },
   periodBtn: { background: "transparent", border: "1px solid #334155", color: "#94A3B8", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" },
   periodBtnActive: { background: "#F59E0B", color: "#0F172A", border: "1px solid #F59E0B" },
   printBtn: { background: "#1E293B", color: "#38BDF8", border: "1px solid #38BDF8", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" },
@@ -1755,10 +2025,10 @@ const styles = {
   vertStatValue: { fontSize: 18, fontWeight: 800 },
   vertStatLabel: { fontSize: 10, color: "#94A3B8" },
   aracKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", flex: 1, minWidth: 0, paddingBottom: 8 },
-  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flex: "1 1 190px", minWidth: 190, flexShrink: 0, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
+  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 190, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
   aracVehCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "grab", transition: "transform 0.12s, border-color 0.12s, box-shadow 0.12s" },
   dashKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 },
-  dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flex: "1 1 220px", minWidth: 220, flexShrink: 0, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
+  dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 220, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
   aracKanbanColHeader: { borderTop: "3px solid", padding: "8px 10px 6px" },
   aracKanbanColBody: { padding: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" },
   aracAddColBtn: { background: "transparent", border: "1px dashed #334155", color: "#94A3B8", borderRadius: 6, padding: "5px 0", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 },
@@ -1781,12 +2051,12 @@ const styles = {
   filterToolbar: { display: "flex", gap: 12 },
   searchWrapper: { display: "flex", alignItems: "center", gap: 8, background: "#1E293B", padding: "8px 12px", borderRadius: 8, border: "1px solid #334155", flex: 1 },
   searchInput: { background: "transparent", border: "none", color: "#F8FAFC", fontSize: 12, outline: "none", width: "100%" },
-  primaryActionBtn: { background: "#F59E0B", color: "#0F172A", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer" },
+  primaryActionBtn: { background: "linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)", color: "#0F172A", border: "none", padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer", boxShadow: "0 2px 10px rgba(245, 158, 11, 0.25)" },
   ghostBtn: { background: "transparent", border: "1px solid #334155", color: "#94A3B8", padding: "8px 16px", borderRadius: 8, fontSize: 12, cursor: "pointer" },
   yearEndHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 },
   viewTitle: { fontSize: 20, fontWeight: 800 },
   viewSub: { fontSize: 11, color: "#94A3B8" },
-  yearEndTableCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20, overflowX: "auto" },
+  yearEndTableCard: { background: "linear-gradient(160deg, #1E293B 0%, #182233 100%)", border: "1px solid #334155", borderRadius: 14, padding: 20, overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 12, textAlign: "left" },
   th: { borderBottom: "1px solid #334155", padding: "10px 12px", color: "#F59E0B", fontWeight: 700 },
   tr: { borderBottom: "1px solid #0F172A" },
@@ -1794,7 +2064,7 @@ const styles = {
   tdTitle: { padding: "10px 12px", fontWeight: 700 },
   deleteIconBtn: { background: "transparent", border: "none", color: "#EF4444", cursor: "pointer" },
   editIconBtn: { background: "transparent", border: "none", color: "#F59E0B", cursor: "pointer", fontWeight: 600, fontSize: 11 },
-  loginOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 },
+  loginOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "radial-gradient(circle at 50% 20%, #1c2947 0%, #0F172A 55%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 },
   loginCard: { background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 20, padding: 32, width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 16 },
   loginHeader: { textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" },
   loginLogo: { width: 64, height: 64, borderRadius: 16, background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" },
