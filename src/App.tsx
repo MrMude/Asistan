@@ -378,12 +378,82 @@ const INITIAL_CHATS = [
 // değiştirilebilir.
 const INITIAL_REPORTS = [
   {
+    id: "rpt-2026-08-25",
+    seq: 36,
+    baslik: "Gün Sonu Kalite Kontrol ve Araç Durum Raporu",
+    tarih: "2026-08-25",
+    hazirlayan: "Kalite Güvence Yönetimi (K-QN)",
+    bolum: "Fabrika 1 & Depo Takip",
+    sonDurumOzeti: "Yeni Eklenenler/Güncellenenler: #149, #151, #152, #153 şubeye eklendi.\\nHazır Durumdakiler: #148 ve #150 numaralı araçlar hazır.\\nDepoda Rework Devam Eden Araçlar: #136, #137, #138",
+    araclar: [
+      { id: "veh25-1", no: "140", konum: "fabrika1", asama: "Lift", detay: "Liftte.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-2", no: "141", konum: "fabrika1", asama: "EOL", detay: "Rot ayarı yapılacak. Spoiler darbeden dolayı boyahaneye girecek.", tarih: "2026-08-25", reworklar: [{ id: "rw-2", text: "Rework / Boya Bekliyor — spoiler darbe hasarı", tarih: "2026-08-25" }] },
+      { id: "veh25-3", no: "142", konum: "fabrika1", asama: "EOL", detay: "Rot ayarı yapılacak. Direksiyon çerçeve çizik, yapıştırıcı taşması. Spoiler darbeden dolayı boyahaneye girecek.", tarih: "2026-08-25", reworklar: [{ id: "rw-3", text: "Rework / Boya Bekliyor — spoiler darbe hasarı, direksiyon çerçeve çizik", tarih: "2026-08-25" }] },
+      { id: "veh25-4", no: "146", konum: "fabrika1", asama: "EOL", detay: "Rot ayarı ve frenleme motoru yapılacak.", tarih: "2026-08-25", reworklar: [{ id: "rw-4", text: "Rework — rot ayarı ve frenleme motoru", tarih: "2026-08-25" }] },
+      { id: "veh25-5", no: "147", konum: "fabrika1", asama: "EOL", detay: "Rot ayarı yapılacak.", tarih: "2026-08-25", reworklar: [{ id: "rw-5", text: "Rework — rot ayarı", tarih: "2026-08-25" }] },
+      { id: "veh25-6", no: "148", konum: "fabrika1", asama: "EE Kontrol", detay: "Araç hazır.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-7", no: "149", konum: "fabrika1", asama: "EOL", detay: "Rot ayarı yapılacak.", tarih: "2026-08-25", reworklar: [{ id: "rw-7", text: "Rework — rot ayarı", tarih: "2026-08-25" }] },
+      { id: "veh25-8", no: "150", konum: "fabrika1", asama: "EE Kontrol", detay: "Araç hazır.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-9", no: "151", konum: "fabrika1", asama: "EOL", detay: "Şarj testi bekliyor, görsel kontrol yapılacak.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-10", no: "152", konum: "fabrika1", asama: "Sürüş Testi", detay: "Görsel kontrol yapıldı, sürüş testi yapılacak. Şarj testi bekliyor.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-11", no: "153", konum: "fabrika1", asama: "Lift", detay: "Araç liftte.", tarih: "2026-08-25", reworklar: [] },
+      { id: "veh25-12", no: "136", konum: "depo", asama: "Final Kontrol", detay: "Final kontrol edildi. Sol fren park stop içi buharlaşma mevcut. Tamir işlemi bekliyor (Serbest bırakılmadı).", tarih: "2026-08-25", reworklar: [{ id: "rw-12", text: "Final Kontrol NOK — sol fren park stop içi buharlaşma", tarih: "2026-08-25" }] },
+      { id: "veh25-13", no: "137", konum: "depo", asama: "Final Kontrol", detay: "Final kontrol edildi. Silecek ses yapıyor çalışırken. Tamir işlemi bekliyor (Serbest bırakılmadı).", tarih: "2026-08-25", reworklar: [{ id: "rw-13", text: "Final Kontrol NOK — silecek ses yapıyor", tarih: "2026-08-25" }] },
+      { id: "veh25-14", no: "138", konum: "depo", asama: "Sızdırmazlık Testi", detay: "Bagaj su kaçağı giderildi. Sağ kapı üst tavan su kaçağı devam ediyor. Tamir işlemleri bekliyor.", tarih: "2026-08-25", reworklar: [{ id: "rw-14", text: "Sızdırmazlık NOK — sağ kapı üst tavan su kaçağı devam ediyor", tarih: "2026-08-25" }] },
+      { id: "veh25-15", no: "135", konum: "depo", asama: "Serbestlik", detay: "Final kontrol edildi ve serbest bırakıldı.", tarih: "2026-08-24", reworklar: [] },
+      { id: "veh25-16", no: "144", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri yapıldı ve serbest bırakıldı.", tarih: "2026-08-24", reworklar: [] },
+      { id: "veh25-17", no: "145", konum: "depo", asama: "Serbestlik", detay: "Final kontrol edildi ve serbest bırakıldı.", tarih: "2026-08-24", reworklar: [] },
+      { id: "veh25-18", no: "163", konum: "depo", asama: "Serbestlik", detay: "Final kontrol edildi ve serbest bırakıldı.", tarih: "2026-08-24", reworklar: [] },
+      { id: "veh25-19", no: "133", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-20", no: "129", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-21", no: "134", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-22", no: "124", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-23", no: "128", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-24", no: "126", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-25", no: "143", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-26", no: "139", konum: "depo", asama: "Serbestlik", detay: "Final kontrolleri tamamlanarak serbest bırakıldı.", tarih: "2026-08-21", reworklar: [] },
+      { id: "veh25-27", no: "130", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, final kontrol edildi ve serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh25-28", no: "131", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri yapıldı, final yapıldı ve serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh25-29", no: "118", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-20", reworklar: [] },
+      { id: "veh25-30", no: "127", konum: "depo", asama: "Serbestlik", detay: "Tamir işlemleri tamamlandı, final kontrol yapıldı ve serbest bırakıldı.", tarih: "2026-08-19", reworklar: [] },
+      { id: "veh25-31", no: "132", konum: "depo", asama: "Serbestlik", detay: "Kapı kilit tamir edildi, final kontrol yapıldı ve serbest bırakıldı.", tarih: "2026-08-19", reworklar: [] },
+      { id: "veh25-32", no: "120", konum: "depo", asama: "Serbestlik", detay: "EMC test aracı olarak serbest bırakıldı.", tarih: "2026-08-18", reworklar: [] },
+      { id: "veh25-33", no: "122", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, tüm kontroller tamamlanarak serbest bırakıldı.", tarih: "2026-08-18", reworklar: [] },
+      { id: "veh25-34", no: "108", konum: "depo", asama: "Serbestlik", detay: "Ön sol çamurluk ve kapı ayarı tamir işlemleri tamamlandı.", tarih: "2026-08-17", reworklar: [] },
+      { id: "veh25-35", no: "107", konum: "depo", asama: "Serbestlik", detay: "Harness düzeltildi, E/E & Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh25-36", no: "121", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık ve eksik parçalar tamamlandı, serbest bırakıldı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh25-37", no: "123", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, E/E Check ve Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh25-38", no: "125", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, trim ayarları, modül ve Final kontrolleri tamamlandı.", tarih: "2026-08-14", reworklar: [] },
+      { id: "veh25-39", no: "110", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, final kontrol edildi, olumsuzluk yok.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh25-40", no: "117", konum: "depo", asama: "Serbestlik", detay: "Ön tampon ve cam açıklık işlemleri yapıldı, final kontrol OK.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh25-41", no: "119", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık testi OK, final kontrol yapıldı.", tarih: "2026-08-12", reworklar: [] },
+      { id: "veh25-42", no: "106", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı.", tarih: "2026-08-11", reworklar: [] },
+      { id: "veh25-43", no: "116", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, Final kontrolü ve E/E Testi tamamlandı. Depoya giriş/park yapıldı.", tarih: "2026-08-11", reworklar: [] },
+      { id: "veh25-44", no: "111", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh25-45", no: "112", konum: "depo", asama: "Serbestlik", detay: "Sürüş, sızdırmazlık ve E/E Check kontrolleri tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh25-46", no: "113", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, ön ızgara/silecek ayarları ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh25-47", no: "114", konum: "depo", asama: "Serbestlik", detay: "Radyatör değişimi, sızdırmazlık ve E/E Check tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh25-48", no: "115", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık, kaput montajı ve E/E Check kontrolleri tamamlandı.", tarih: "2026-08-10", reworklar: [] },
+      { id: "veh25-49", no: "098", konum: "depo", asama: "Serbestlik", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh25-50", no: "130", konum: "depo", asama: "Serbestlik", detay: "Şenol Bey tarafından şartlı onay verildi ve serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh25-51", no: "104", konum: "depo", asama: "Serbestlik", detay: "Kalite kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh25-52", no: "109", konum: "depo", asama: "Serbestlik", detay: "Fren körüğü kaynak kaçağı giderildi, EE Check tamamlandı.", tarih: "2026-08-06", reworklar: [] },
+      { id: "veh25-53", no: "102 (eski 108)", konum: "depo", asama: "Serbestlik", detay: "Şenol Bey şartlı onay verildi ve serbest bırakıldı.", tarih: "2026-08-07", reworklar: [] },
+      { id: "veh25-54", no: "103", konum: "depo", asama: "Serbestlik", detay: "Spoiler yapıştırma, sızdırmazlık ve EE Check kontrolleri tamamlandı.", tarih: "2026-08-04", reworklar: [] },
+      { id: "veh25-55", no: "097", konum: "depo", asama: "Serbestlik", detay: "Sol ayna değişimi yapıldı. Ton farkı durumu onaylandı.", tarih: "2026-08-03", reworklar: [] },
+      { id: "veh25-56", no: "091", konum: "depo", asama: "Serbestlik", detay: "Sızdırmazlık ve EE Check kontrolleri tamamlandı.", tarih: "2026-08-01", reworklar: [] },
+      { id: "veh25-57", no: "096", konum: "depo", asama: "Serbestlik", detay: "Final yapıldı, EPS ayarı, silecek ses ve fıskiye ayarları tamamlandı.", tarih: "2026-08-01", reworklar: [] },
+      { id: "veh25-58", no: "095", konum: "depo", asama: "Serbestlik", detay: "Tüm kalite ve test kontrolleri tamamlandı, serbest bırakıldı.", tarih: "2026-08-01", reworklar: [] },
+    ]
+  },
+  {
     id: "rpt-2026-08-22",
     seq: 34,
     baslik: "Gün Sonu Kalite Kontrol ve Araç Durum Raporu",
     tarih: "2026-08-22",
     hazirlayan: "Kalite Güvence Yönetimi (K-QN)",
     bolum: "Fabrika 1 & Depo Takip",
+    sonDurumOzeti: "Şubedeki Yeni/Güncel Durumlar: #141, #146, #148 ve #150 numaralı araçlar şube listesine işlendi.\nTesti İlerleyen Araçlar (Sızdırmazlık OK ➔ EE Bekleyen): #135, #136, #137, #145, #163\nEE Tamamlanıp Final Bekleyen Araçlar: #144\nRework Devam Eden Araçlar: #138 (Su kaçağı devam ediyor, sealler uygulandı)",
     araclar: [
       { id: "veh-1", no: "141", konum: "fabrika1", asama: "Lift", detay: "Lifte alındı.", tarih: "2026-08-22", reworklar: [] },
       { id: "veh-2", no: "146", konum: "fabrika1", asama: "Sürüş Testi", detay: "Açık maddeler tamamlandı, vakum pompası sorunu giderildi. Sadece sürüş testi kaldı.", tarih: "2026-08-22", reworklar: [] },
@@ -447,7 +517,7 @@ const SHARED_DOC = doc(db, "app_data", "shared");
 // yeni INITIAL_* verisiyle değiştirilerek otomatik göç ediliyor (bkz.
 // aşağıdaki onSnapshot). Şema uyumsuz bir değişiklik yapılmadıkça bu
 // sayıyı artırmaya gerek yok.
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
 
 // Günün sözü — herkes aynı gün aynı sözü görsün diye yılın gününe göre
 // deterministik seçiliyor (rastgele değil). Kalite/ekip/disiplin temalı,
@@ -577,6 +647,15 @@ export default function App() {
           if (v < 4) {
             const renameStage = (s) => (s === "Şarj Testi" ? "EOL" : s === "Elektrik Kontrol" ? "EE Kontrol" : s);
             nextReports = nextReports.map(r => ({ ...r, araclar: (r.araclar || []).map(a => ({ ...a, asama: renameStage(a.asama) })) }));
+          }
+          if (v < 5) {
+            // 25 Ağustos raporu (v36) eklendi. Sadece bu id mevcut değilse ekle —
+            // kullanıcının o tarihten sonra kendi eklediği/düzenlediği veriyi
+            // ezmez, sadece eksikse tamamlar.
+            if (!nextReports.some(r => r.id === "rpt-2026-08-25")) {
+              const seedReport25 = INITIAL_REPORTS.find(r => r.id === "rpt-2026-08-25");
+              if (seedReport25) nextReports = [seedReport25, ...nextReports];
+            }
           }
 
           const nextTodos = d.todos || INITIAL_TODOS;
@@ -1805,6 +1884,123 @@ function ReportDetail({ report, onUpdate, onClose }) {
     </div>
   );
 
+  const renderColumn = (col) => {
+    const colVehicles = araclar.filter(a => a.konum === col.konum && a.asama === col.asama);
+    const color = KONUM_META[col.konum].color;
+    const colKey = `${col.konum}-${col.asama}`;
+    return (
+      <div
+        key={colKey}
+        style={styles.aracKanbanCol}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+        onDrop={(e) => { e.preventDefault(); const vehId = e.dataTransfer.getData("text"); if (vehId) moveVehicleToColumn(vehId, col.konum, col.asama); }}
+      >
+        <div style={{ ...styles.aracKanbanColHeader, borderTopColor: color }}>
+          <div style={{ fontSize: 9, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>{KONUM_META[col.konum].label}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color }}>{col.asama}</span>
+            <span style={styles.kanbanBadge}>{colVehicles.length}</span>
+          </div>
+        </div>
+        <div style={styles.aracKanbanColBody}>
+          <button style={styles.aracAddColBtn} onClick={() => openAddForm(col.konum, col.asama)}><Plus size={11} /> Araç Ekle</button>
+          {addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama && (
+            <div style={styles.aracVehCard}>
+              <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} autoFocus />
+              <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
+              <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={addVehicle}>Ekle</button>
+                <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setAddingTo(null)}>Vazgeç</button>
+              </div>
+            </div>
+          )}
+          {colVehicles.map(v => {
+            const advance = getAdvanceInfo(v);
+            return editingVehId === v.id ? (
+              <div key={v.id} style={styles.aracVehCard}>
+                <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} value={editForm.no} onChange={e => setEditForm(f => ({ ...f, no: e.target.value }))} />
+                <select style={{ ...styles.selectInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.asama} onChange={e => setEditForm(f => ({ ...f, asama: e.target.value }))}>
+                  {(v.konum === "fabrika1" ? FABRIKA1_STAGES : DEPO_STAGES).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={editForm.detay} onChange={e => setEditForm(f => ({ ...f, detay: e.target.value }))} />
+                <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.tarih} onChange={e => setEditForm(f => ({ ...f, tarih: e.target.value }))} />
+                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                  <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={saveEdit}>Kaydet</button>
+                  <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setEditingVehId(null)}>Vazgeç</button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={v.id}
+                style={styles.aracVehCard}
+                className="hover-lift"
+                draggable
+                onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text", v.id); }}
+                title="Başka bir aşamaya sürükleyip bırakabilirsiniz"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GripVertical size={11} color="#475569" /><span style={styles.reportRowNo}>#{v.no}</span></span>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <Edit2 size={11} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => openEditForm(v)} />
+                    <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeVehicle(v.id)} />
+                  </div>
+                </div>
+                {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
+                <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
+                {(v.reworklar || []).map(rw => (
+                  <div key={rw.id} style={{ fontSize: 10, marginTop: 3, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }} onClick={() => toggleRework(v.id, rw.id)}>
+                    {rw.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0 }} />}
+                    <span style={{ color: rw.done ? "#64748B" : "#FCA5A5", textDecoration: rw.done ? "line-through" : "none", flex: 1 }}>🔧 {rw.text}</span>
+                    <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeRework(v.id, rw.id); }} />
+                  </div>
+                ))}
+                {reworkFormFor === v.id ? (
+                  <div style={{ display: "flex", gap: 4, marginTop: 5 }}>
+                    <input style={{ ...styles.mainInput, fontSize: 10, padding: "4px 6px" }} placeholder="Rework açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
+                    <button style={{ ...styles.addInlineBtn, fontSize: 10, padding: "0 8px" }} onClick={() => addRework(v.id)}>Ekle</button>
+                  </div>
+                ) : (
+                  <button style={styles.aracReworkBtn} onClick={() => setReworkFormFor(v.id)}>+ Rework</button>
+                )}
+                {advance && (
+                  <button style={styles.aracAdvanceBtn} onClick={() => advanceVehicle(v)}>{advance.label} <ArrowRight size={11} /></button>
+                )}
+                {!advance && v.asama === "Serbestlik" && <div style={styles.aracServeBadge}>✓ Serbest — müşteriye gidebilir</div>}
+
+                {col.konum === "depo" && col.asama === "EE Kontrol" && (
+                  v.formVerisi?.eeKontrol?.doldu ? (
+                    <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.eeKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.eeKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee" })}>
+                      <FileText size={11} /> EE Kontrol: {v.formVerisi.eeKontrol.genelSonuc} ({v.formVerisi.eeKontrol.nokSayisi} NOK)
+                    </button>
+                  ) : (
+                    <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee" })}>
+                      <FileUp size={11} /> EE Kontrol Formunu Doldur
+                    </button>
+                  )
+                )}
+                {col.konum === "depo" && col.asama === "Final Kontrol" && (
+                  v.formVerisi?.finalKontrol?.doldu ? (
+                    <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.finalKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.finalKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "final" })}>
+                      <FileText size={11} /> Final Kontrol: {v.formVerisi.finalKontrol.genelSonuc} ({v.formVerisi.finalKontrol.nokSayisi} NOK)
+                    </button>
+                  ) : (
+                    <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "final" })}>
+                      <FileUp size={11} /> Final Kontrol Formunu Doldur
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })}
+          {colVehicles.length === 0 && !(addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama) && (
+            <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 20 }} id="print-area">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -1827,6 +2023,16 @@ function ReportDetail({ report, onUpdate, onClose }) {
         </div>
       </div>
 
+      <div style={{ marginBottom: 10 }} className="no-print">
+        <label style={styles.inputLabel}>Son Durum Özeti</label>
+        <textarea
+          style={{ ...styles.mainInput, minHeight: 64, resize: "vertical", fontFamily: "inherit", padding: "8px 10px" }}
+          placeholder="Örn: Yeni Eklenenler: #149, #151... | Hazır Durumdakiler: ... | Rework Devam Eden: ..."
+          value={report.sonDurumOzeti || ""}
+          onChange={e => updateMeta({ sonDurumOzeti: e.target.value })}
+        />
+      </div>
+
       <div style={{ display: "flex", gap: 16 }} className="no-print">
         <div style={styles.vertStatRail}>
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#94A3B8" }} /><div><div style={styles.vertStatValue}>{araclar.length}</div><div style={styles.vertStatLabel}>Toplam Araç</div></div></div>
@@ -1838,123 +2044,19 @@ function ReportDetail({ report, onUpdate, onClose }) {
           <div style={styles.vertStatItem}><div style={{ ...styles.vertStatDot, background: "#6EE7B7" }} /><div><div style={styles.vertStatValue}>{releasedThisWeek}</div><div style={styles.vertStatLabel}>Bu Hafta Serbest Kalan</div></div></div>
         </div>
 
-        <div style={styles.aracKanbanScroll}>
-          {ARAC_KANBAN_COLUMNS.map(col => {
-            const colVehicles = araclar.filter(a => a.konum === col.konum && a.asama === col.asama);
-            const color = KONUM_META[col.konum].color;
-            const colKey = `${col.konum}-${col.asama}`;
-            return (
-              <div
-                key={colKey}
-                style={styles.aracKanbanCol}
-                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
-                onDrop={(e) => { e.preventDefault(); const vehId = e.dataTransfer.getData("text"); if (vehId) moveVehicleToColumn(vehId, col.konum, col.asama); }}
-              >
-                <div style={{ ...styles.aracKanbanColHeader, borderTopColor: color }}>
-                  <div style={{ fontSize: 9, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>{KONUM_META[col.konum].label}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color }}>{col.asama}</span>
-                    <span style={styles.kanbanBadge}>{colVehicles.length}</span>
-                  </div>
-                </div>
-                <div style={styles.aracKanbanColBody}>
-                  <button style={styles.aracAddColBtn} onClick={() => openAddForm(col.konum, col.asama)}><Plus size={11} /> Araç Ekle</button>
-                  {addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama && (
-                    <div style={styles.aracVehCard}>
-                      <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} autoFocus />
-                      <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
-                      <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={vehForm.tarih} onChange={e => setVehForm(f => ({ ...f, tarih: e.target.value }))} />
-                      <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                        <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={addVehicle}>Ekle</button>
-                        <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setAddingTo(null)}>Vazgeç</button>
-                      </div>
-                    </div>
-                  )}
-                  {colVehicles.map(v => {
-                    const advance = getAdvanceInfo(v);
-                    return editingVehId === v.id ? (
-                      <div key={v.id} style={styles.aracVehCard}>
-                        <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} value={editForm.no} onChange={e => setEditForm(f => ({ ...f, no: e.target.value }))} />
-                        <select style={{ ...styles.selectInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.asama} onChange={e => setEditForm(f => ({ ...f, asama: e.target.value }))}>
-                          {(v.konum === "fabrika1" ? FABRIKA1_STAGES : DEPO_STAGES).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={editForm.detay} onChange={e => setEditForm(f => ({ ...f, detay: e.target.value }))} />
-                        <input type="date" style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.tarih} onChange={e => setEditForm(f => ({ ...f, tarih: e.target.value }))} />
-                        <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                          <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={saveEdit}>Kaydet</button>
-                          <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setEditingVehId(null)}>Vazgeç</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        key={v.id}
-                        style={styles.aracVehCard}
-                        className="hover-lift"
-                        draggable
-                        onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text", v.id); }}
-                        title="Başka bir aşamaya sürükleyip bırakabilirsiniz"
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GripVertical size={11} color="#475569" /><span style={styles.reportRowNo}>#{v.no}</span></span>
-                          <div style={{ display: "flex", gap: 5 }}>
-                            <Edit2 size={11} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => openEditForm(v)} />
-                            <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeVehicle(v.id)} />
-                          </div>
-                        </div>
-                        {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
-                        <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
-                        {(v.reworklar || []).map(rw => (
-                          <div key={rw.id} style={{ fontSize: 10, marginTop: 3, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }} onClick={() => toggleRework(v.id, rw.id)}>
-                            {rw.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0 }} />}
-                            <span style={{ color: rw.done ? "#64748B" : "#FCA5A5", textDecoration: rw.done ? "line-through" : "none", flex: 1 }}>🔧 {rw.text}</span>
-                            <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeRework(v.id, rw.id); }} />
-                          </div>
-                        ))}
-                        {reworkFormFor === v.id ? (
-                          <div style={{ display: "flex", gap: 4, marginTop: 5 }}>
-                            <input style={{ ...styles.mainInput, fontSize: 10, padding: "4px 6px" }} placeholder="Rework açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
-                            <button style={{ ...styles.addInlineBtn, fontSize: 10, padding: "0 8px" }} onClick={() => addRework(v.id)}>Ekle</button>
-                          </div>
-                        ) : (
-                          <button style={styles.aracReworkBtn} onClick={() => setReworkFormFor(v.id)}>+ Rework</button>
-                        )}
-                        {advance && (
-                          <button style={styles.aracAdvanceBtn} onClick={() => advanceVehicle(v)}>{advance.label} <ArrowRight size={11} /></button>
-                        )}
-                        {!advance && v.asama === "Serbestlik" && <div style={styles.aracServeBadge}>✓ Serbest — müşteriye gidebilir</div>}
-
-                        {col.konum === "depo" && col.asama === "EE Kontrol" && (
-                          v.formVerisi?.eeKontrol?.doldu ? (
-                            <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.eeKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.eeKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee" })}>
-                              <FileText size={11} /> EE Kontrol: {v.formVerisi.eeKontrol.genelSonuc} ({v.formVerisi.eeKontrol.nokSayisi} NOK)
-                            </button>
-                          ) : (
-                            <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee" })}>
-                              <FileUp size={11} /> EE Kontrol Formunu Doldur
-                            </button>
-                          )
-                        )}
-                        {col.konum === "depo" && col.asama === "Final Kontrol" && (
-                          v.formVerisi?.finalKontrol?.doldu ? (
-                            <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.finalKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.finalKontrol.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "final" })}>
-                              <FileText size={11} /> Final Kontrol: {v.formVerisi.finalKontrol.genelSonuc} ({v.formVerisi.finalKontrol.nokSayisi} NOK)
-                            </button>
-                          ) : (
-                            <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "final" })}>
-                              <FileUp size={11} /> Final Kontrol Formunu Doldur
-                            </button>
-                          )
-                        )}
-                      </div>
-                    );
-                  })}
-                  {colVehicles.length === 0 && !(addingTo && addingTo.konum === col.konum && addingTo.asama === col.asama) && (
-                    <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
+          <div>
+            <div style={styles.kanbanRowLabel}><span style={{ color: KONUM_META.fabrika1.color }}>●</span> Fabrika 1 (Şube)</div>
+            <div style={styles.aracKanbanScroll}>
+              {ARAC_KANBAN_COLUMNS.filter(c => c.konum === "fabrika1").map(renderColumn)}
+            </div>
+          </div>
+          <div>
+            <div style={styles.kanbanRowLabel}><span style={{ color: KONUM_META.depo.color }}>●</span> Depo</div>
+            <div style={styles.aracKanbanScroll}>
+              {ARAC_KANBAN_COLUMNS.filter(c => c.konum === "depo").map(renderColumn)}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1980,6 +2082,12 @@ function ReportDetail({ report, onUpdate, onClose }) {
           KALİTE KONTROL STANDART AKIŞI (Fabrika 1): {FABRIKA1_STAGES.join(" ➔ ")} ➔ Depoya Sevk<br />
           KALİTE KONTROL STANDART AKIŞI (Depo): {DEPO_STAGES.join(" ➔ ")}
         </div>
+        {report.sonDurumOzeti && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Son Durum Özeti ({fmtDate(report.tarih)})</div>
+            <div style={{ fontSize: 11, whiteSpace: "pre-line" }}>{report.sonDurumOzeti}</div>
+          </div>
+        )}
         {printGroup("1. Fabrika 1 Araçları", fabrikaAraclar, "#0369A1", false)}
         {printGroup("2. Depodaki Araçlar (İşlem ve Rework Sürecindekiler)", depoAraclar, "#B45309", false)}
         {printGroup("3. Serbest Bırakılan Araçlar", serbestAraclar, "#047857", true)}
@@ -2820,8 +2928,9 @@ const styles = {
   vertStatDot: { width: 10, height: 10, borderRadius: 10, flexShrink: 0 },
   vertStatValue: { fontSize: 18, fontWeight: 800 },
   vertStatLabel: { fontSize: 10, color: "#94A3B8" },
-  aracKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", flex: 1, minWidth: 0, paddingBottom: 8 },
-  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 190, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
+  aracKanbanScroll: { display: "flex", gap: 18, overflowX: "auto", flex: 1, minWidth: 0, paddingBottom: 8 },
+  aracKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 240, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
+  kanbanRowLabel: { fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 },
   aracVehCard: { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, padding: 8, cursor: "grab", transition: "transform 0.12s, border-color 0.12s, box-shadow 0.12s" },
   dashKanbanScroll: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 },
   dashKanbanCol: { background: "#0F172A", border: "1px solid #334155", borderRadius: 10, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 220, display: "flex", flexDirection: "column", transition: "border-color 0.15s" },
