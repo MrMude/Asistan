@@ -836,9 +836,11 @@ function TodoListView({ todos, setTodos, currentUser }) {
             const isOpen = selectedId === t.id;
             return (
               <div key={t.id} style={{ background: "#0F172A", borderRadius: 10, border: isLate ? "1px solid #EF4444" : (isOpen ? "1px solid #F59E0B" : "1px solid #334155"), overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", flex: 1, minWidth: 0 }} onClick={() => setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x))}>
-                    {t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}
+                <div className="todo-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer" }} onClick={() => setSelectedId(isOpen ? null : t.id)}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                    <span onClick={(e) => { e.stopPropagation(); setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x)); }} style={{ display: "flex", padding: 4, margin: -4 }}>
+                      {t.done ? <CheckSquare size={20} color="#10B981" /> : <Square size={20} color="#F59E0B" />}
+                    </span>
                     <div style={{ minWidth: 0 }}>
                       <span style={{ textDecoration: t.done ? "line-through" : "none", color: t.done ? "#64748B" : "#F8FAFC", fontSize: 13, fontWeight: 600 }}>{t.text}</span>
                       <div style={{ display: "flex", gap: 8, marginTop: 3, alignItems: "center" }}>
@@ -848,11 +850,9 @@ function TodoListView({ todos, setTodos, currentUser }) {
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    <button style={{ ...styles.editIconBtn, display: "flex", alignItems: "center", gap: 3 }} onClick={() => setSelectedId(isOpen ? null : t.id)}>
-                      {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Detay
-                    </button>
-                    <button style={styles.deleteIconBtn} onClick={() => setTodos(todos.filter(x => x.id !== t.id))}><Trash2 size={14} /></button>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+                    {isOpen ? <ChevronDown size={16} color="#F59E0B" /> : <ChevronRight size={16} color="#64748B" />}
+                    <Trash2 size={14} color="#EF4444" style={{ cursor: "pointer", padding: 4, margin: -4 }} onClick={(e) => { e.stopPropagation(); setTodos(todos.filter(x => x.id !== t.id)); }} />
                   </div>
                 </div>
 
