@@ -131,112 +131,31 @@ const DEPO_KONTROL_ITEMS = [
   { id: "dk-final", label: "Final Kontrol" },
 ];
 
-// KY.FR-18 E/E Kontrol Formu Şube — Fabrika Kontrol > EE Kontrol istasyonunun
-// varsayılan checklist şablonu (47 madde).
-const EE_KONTROL_SUBE_ITEMS = [
-  "[Kontrol Ünitesi] EPS (CAL) Güncellendi mi?",
-  "[Kontrol Ünitesi] VCU Domain SW Güncellendi mi?",
-  "[Kontrol Ünitesi] VCU GW SW Güncellendi mi?",
-  "[Kontrol Ünitesi] BMS SW Güncellendi mi?",
-  "[Kontrol Ünitesi] MCU SW Güncellendi mi?",
-  "[Kontrol Ünitesi] MHU SW Güncellendi mi?",
-  "[Kontrol Ünitesi] BCM SW Güncellendi mi?",
-  "[Kontrol Ünitesi] VCU VIN Güncellemesi Güncellendi mi?",
-  "[Kontrol Edilecek] Sağ Sol Dönüş Sinyali",
-  "[Kontrol Edilecek] Gündüz Farı Kontrol",
-  "[Kontrol Edilecek] Licance Plate Kontrol",
-  "[Kontrol Edilecek] Low Beam",
-  "[Kontrol Edilecek] High Beam",
-  "[Kontrol Edilecek] FOG Light",
-  "[Kontrol Edilecek] Reverse Gear Light",
-  "[Kontrol Edilecek] Reverse Radar",
-  "[Kontrol Edilecek] Reverse Park Sensor",
-  "[Kontrol Edilecek] Hand Brake",
-  "[Kontrol Edilecek] Sağ Sol Cam Açma Kapama",
-  "[Kontrol Edilecek] Sağ Sol Kapı Kilit Sistemi Kontrol",
-  "[Kontrol Edilecek] Arka Bagaj Kilit Sistemi Kontrol",
-  "[Kontrol Edilecek] Dashboard Dörtlü Sinyal Kontrol",
-  "[Kontrol Edilecek] Dashboard Kilit Butonu Kontrol",
-  "[Kontrol Edilecek] Wiper System Kontrol Speed 1 / Speed 2",
-  "[Kontrol Edilecek] Washer system control",
-  "[Kontrol Edilecek] HVAC Blower Kotnrol",
-  "[Kontrol Edilecek] HVAC PTC Isıtıcı",
-  "[Kontrol Edilecek] HVAC A/C Kontrol",
-  "[Kontrol Edilecek] HVAC Kanal Değişimi Kontrol",
-  "[Kontrol Edilecek] Vites Geçiş Kontrolleri (P/R/N/D)",
-  "[Kontrol Edilecek] Vakum Pompası Vakum Booster Kontrol",
-  "[Kontrol Edilecek] Speaker Kontrol",
-  "[Kontrol Edilecek] Araç Şarj Testi",
-  "[Kontrol Edilecek] Araç Sürüş Testi",
-  "[Kontrol Edilecek] Regenerative Brake Testi On Off",
-  "[Kontrol Edilecek] ECO SPORT Mode Geçiş Kontrol",
-  "[Ground Resistance] MCU Ground Resistance (< 0.1 Ω @ ≥0.2A)",
-  "[Ground Resistance] e-Motor Ground Resistance (< 0.1 Ω @ ≥0.2A)",
-  "[Ground Resistance] 3in1 Ground Resistance (< 0.1 Ω @ ≥0.2A)",
-  "[Ground Resistance] AC Ground Resistance (< 0.1 Ω @ ≥0.2A)",
-  "[Ground Resistance] HV Battery Ground Resistance (< 0.1 Ω @ ≥0.2A)",
-  "[Connector Resistance] Battery Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)",
-  "[Connector Resistance] Battery Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)",
-  "[Connector Resistance] 3 in 1 PTC Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)",
-  "[Connector Resistance] 3 in 1 PTC Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)",
-  "[Connector Resistance] 3 in 1 AC Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)",
-  "[Connector Resistance] 3 in 1 AC Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)",
+// KY.FR-18 E/E Kontrol Formu Şube — Fabrika 1 EE Kontrol aşamasındaki araç için
+// bölümlere ayrılmış (Uygun/Uygun Değil değerlendirmeli) kontrol maddeleri.
+const EE_KONTROL_SUBE_SECTIONS = [
+  { title: "Kontrol Ünitesi", items: ["EPS (CAL) Güncellendi mi?", "VCU Domain SW Güncellendi mi?", "VCU GW SW Güncellendi mi?", "BMS SW Güncellendi mi?", "MCU SW Güncellendi mi?", "MHU SW Güncellendi mi?", "BCM SW Güncellendi mi?", "VCU VIN Güncellemesi Güncellendi mi?"] },
+  { title: "Kontrol Edilecek", items: ["Sağ Sol Dönüş Sinyali", "Gündüz Farı Kontrol", "Licance Plate Kontrol", "Low Beam", "High Beam", "FOG Light", "Reverse Gear Light", "Reverse Radar", "Reverse Park Sensor", "Hand Brake", "Sağ Sol Cam Açma Kapama", "Sağ Sol Kapı Kilit Sistemi Kontrol", "Arka Bagaj Kilit Sistemi Kontrol", "Dashboard Dörtlü Sinyal Kontrol", "Dashboard Kilit Butonu Kontrol", "Wiper System Kontrol Speed 1 / Speed 2", "Washer system control", "HVAC Blower Kotnrol", "HVAC PTC Isıtıcı", "HVAC A/C Kontrol", "HVAC Kanal Değişimi Kontrol", "Vites Geçiş Kontrolleri (P/R/N/D)", "Vakum Pompası Vakum Booster Kontrol", "Speaker Kontrol", "Araç Şarj Testi", "Araç Sürüş Testi", "Regenerative Brake Testi On Off", "ECO SPORT Mode Geçiş Kontrol"] },
+  { title: "Ground Resistance Ölçümü", items: ["MCU Ground Resistance (< 0.1 Ω @ ≥0.2A)", "e-Motor Ground Resistance (< 0.1 Ω @ ≥0.2A)", "3in1 Ground Resistance (< 0.1 Ω @ ≥0.2A)", "AC Ground Resistance (< 0.1 Ω @ ≥0.2A)", "HV Battery Ground Resistance (< 0.1 Ω @ ≥0.2A)"] },
+  { title: "Connector Resistance Ölçümü", items: ["Battery Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)", "Battery Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)", "3 in 1 PTC Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)", "3 in 1 PTC Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)", "3 in 1 AC Connector (+) (>500 Ω/V, Karea Fit: >50.000 Ω)", "3 in 1 AC Connector (-) (>500 Ω/V, Karea Fit: >50.000 Ω)"] },
 ];
 
-// KY.FR-13 EOL Sürüş Test Kartı — Fabrika Kontrol > Sürüş Testi istasyonunun
-// varsayılan checklist şablonu (43 madde, 7 bölüm).
-const SURUS_TEST_KARTI_ITEMS = [
-  "[SOĞUK SIKMA TESTİ] N'de aracı ittir — Anormal direnç var mı?",
-  "[SOĞUK SIKMA TESTİ] D'de gaz ver — Araç normal hızlanıyor mu? Sıkma hissi veya anormal ses var mı?",
-  "[SOĞUK SIKMA TESTİ] R'de gaz ver — Geri viteste normal hızlanıyor mu? Sıkma hissi veya anormal ses var mı?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Dış aydınlatma — Kısa, uzun, selektör, park, sis, sol/sağ sinyal, dörtlü, stop, geri vites lambası.",
-  "[BCM / EE FONKSİYON KONTROLÜ] Korna — Ses seviyesi ve çalışması normal mi?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Camlar — Tüm camlar açılıp kapanıyor mu? Takılma, yavaşlık veya ses var mı?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Merkezi kilit & kapılar — İçeriden ve anahtarla dışarıdan kilitle-aç. Her kapıda doğru çalışıyor mu?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Aynalar & iç donanım — Aynalar, IP kapakları, emniyet kemeri kapakları, düğmeler ve trim parçaları normal mi?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Emniyet kemerleri — Tokalar çalışıyor mu? Kemer düzgün sarıyor mu? Uyarı sesi/ikonu doğru mu?",
-  "[BCM / EE FONKSİYON KONTROLÜ] El freni (KRİTİK) — El frenini çek → hafif gaz ver → araç ilerlemeye çalışıyor mu? Kayma varsa video + SOC% + saat.",
-  "[BCM / EE FONKSİYON KONTROLÜ] Vites seçimi — P/R/N/D geçişlerinde gecikme, yanlış gösterim veya kararsızlık var mı?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Ana ekran / menüler — Tüm menülerde düğmelere tek tek bas. Donma, sıfırlanma veya gecikme var mı?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Geri görüş kamerası — R'ye alınca görüntü geliyor mu? Görüntü temiz mi?",
-  "[BCM / EE FONKSİYON KONTROLÜ] Klima & havalandırma — Fan 1-2-3, yüze/cama üfleme, iç hava dolaşımı, A/C, ısıtma/soğutma.",
-  "[BCM / EE FONKSİYON KONTROLÜ] Odometre — Sürüş öncesi değeri not et. Sürüş sonrası doğru sayıyor mu? Aracı kapatıp açınca kaldığı yerden devam ediyor mu?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Düşük hız — 500m, 0→30 km/s. Titreme, silkelenme, anormal ses, çekişte kararsızlık var mı? Trim/tavan/torpido/kapı/cam sesi var mı?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Fren — 30→0 x5 (~300m). Her frenlemede sağa/sola ekstrem çekme var mı? Anormal pedal, ses veya titreşim var mı?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Sürekli frenleme — Dur-kalk min. 20x (~600m). Pedal sertleşmesi/boşalması, performans düşüşü veya koku var mı?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Fren — 50→0 x5 (~400m). Her frenlemede sağa/sola ekstrem çekme var mı? Anormal pedal, ses, titreşim veya koku var mı?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Fren — 90→0 / 80→0 / 70→0 (~500m). Her frenlemede sağa/sola ekstrem çekme var mı? Performans düşüşü veya koku var mı?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Son hıza ulaşma (~600m) — ECO modda 90 km/s'ye ulaşıyor mu? SPORT modda 90 km/s'ye ulaşıyor mu?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Yokuş çıkış + iniş (~400m) — Çıkışta geri kaçırma, çekiş düşmesi var mı? İnişte rejen açık/kapalı davranışı normal mi?",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] Yokuş el freni (KRİTİK) — Yokuşta en az 6 kez kaydır-tut. El freni çek → hafif gaz → kayıyor mu? Kayma varsa video + SOC% + saat.",
-  "[SÜRÜŞ TESTİ (~3.500m Sabit Güzergah)] N'de yokuş fren testi (~100m) — Yokuş aşağı N'de fren yap, bırak. Araç kendi kendine hareket ediyor mu?",
-  "[FREN ONAY] Düşük hız fren genel — 30→0 testlerinde tutarlı performans sağlandı mı?",
-  "[FREN ONAY] Orta hız fren genel — 50→0 testlerinde tutarlı performans sağlandı mı?",
-  "[FREN ONAY] Yüksek hız fren genel — 90/80/70→0 testlerinde tutarlı performans sağlandı mı?",
-  "[FREN ONAY] FRENLERDE SIKMA VAR MI? (KRİTİK) — Anormal direnç, tek taraflı ısınma, koku veya sürtünme hissi var mı? Varsa video + foto + saat.",
-  "[FREN ONAY] Nihai Fren Onayı — Tüm fren testleri tamamlandı, anormal bulgu yok mu?",
-  "[ROT ONAY] Rot ayarı — Düz/eğimsiz yolda direksiyonu bırak. Araç sola veya sağa çekiyor mu?",
-  "[ROT ONAY] Direksiyon merkezi — Düz gidişte direksiyon tam ortada mı? Belirgin sapma varsa foto + not al.",
-  "[ROT ONAY] Yüksek hızda kararlılık — 70-90 km/s'de araç düz gidiyor mu? Çekme veya titreşim var mı?",
-  "[SICAK SIKMA TESTİ (Sürüş Sonrası)] Sol ön disk — Elini yaklaştır (dokunma). Diğer disklere kıyasla belirgin sıcak mı? Sıcaksa sıkma şüphesi; foto + not al.",
-  "[SICAK SIKMA TESTİ (Sürüş Sonrası)] Sağ ön disk — Aynı kontrol. Belirgin şekilde sıcak mı?",
-  "[SICAK SIKMA TESTİ (Sürüş Sonrası)] Sol arka disk — Aynı kontrol. Belirgin şekilde sıcak mı?",
-  "[SICAK SIKMA TESTİ (Sürüş Sonrası)] Sağ arka disk — Aynı kontrol. Belirgin şekilde sıcak mı?",
-  "[SICAK SIKMA TESTİ (Sürüş Sonrası)] N'de aracı ittir — Soğuk teste kıyasla artan direnç var mı? Isınma ile kötüleşiyorsa sıkma kesindir.",
-  "[MÜHENDİS & KALİTE KONTROLÜ] Kapı / Kaput ayarı — Görsel kontrol. Fotoğraf ilet.",
-  "[MÜHENDİS & KALİTE KONTROLÜ] Boya kalitesi — Görsel kontrol. Fotoğraf ilet.",
-  "[MÜHENDİS & KALİTE KONTROLÜ] Trim & Bagaj — İç trim, dış trim düzgün mü? Bagaj yüksekliği doğru mu?",
-  "[MÜHENDİS & KALİTE KONTROLÜ] Tam dönüş kontrolü — Düşük hızda tam sağ/sol manevra. Sürtme, vuruntu veya aks sesi var mı?",
-  "[MÜHENDİS & KALİTE KONTROLÜ] DTC / Diyagnostik tarama — Aktif veya geçmiş hata varsa kayıt altına al. Tarama bitiş saatini not et.",
-  "[MÜHENDİS & KALİTE KONTROLÜ] Mühendis Nihai Onayı",
+// KY.FR-13 EOL Sürüş Test Kartı — Fabrika 1 Sürüş Testi aşamasındaki araç için
+// bölümlere ayrılmış (Uygun/Uygun Değil değerlendirmeli) kontrol maddeleri.
+const SURUS_TEST_SECTIONS = [
+  { title: "Soğuk Sıkma Testi", items: ["N'de aracı ittir — Anormal direnç var mı?", "D'de gaz ver — Araç normal hızlanıyor mu? Sıkma hissi veya anormal ses var mı?", "R'de gaz ver — Geri viteste normal hızlanıyor mu? Sıkma hissi veya anormal ses var mı?"] },
+  { title: "BCM / EE Fonksiyon Kontrolü", items: ["Dış aydınlatma — Kısa, uzun, selektör, park, sis, sol/sağ sinyal, dörtlü, stop, geri vites lambası.", "Korna — Ses seviyesi ve çalışması normal mi?", "Camlar — Tüm camlar açılıp kapanıyor mu? Takılma, yavaşlık veya ses var mı?", "Merkezi kilit & kapılar — İçeriden ve anahtarla dışarıdan kilitle-aç. Her kapıda doğru çalışıyor mu?", "Aynalar & iç donanım — Aynalar, IP kapakları, emniyet kemeri kapakları, düğmeler ve trim parçaları normal mi?", "Emniyet kemerleri — Tokalar çalışıyor mu? Kemer düzgün sarıyor mu? Uyarı sesi/ikonu doğru mu?", "El freni (KRİTİK) — El frenini çek → hafif gaz ver → araç ilerlemeye çalışıyor mu? Kayma varsa video + SOC% + saat.", "Vites seçimi — P/R/N/D geçişlerinde gecikme, yanlış gösterim veya kararsızlık var mı?", "Ana ekran / menüler — Tüm menülerde düğmelere tek tek bas. Donma, sıfırlanma veya gecikme var mı?", "Geri görüş kamerası — R'ye alınca görüntü geliyor mu? Görüntü temiz mi?", "Klima & havalandırma — Fan 1-2-3, yüze/cama üfleme, iç hava dolaşımı, A/C, ısıtma/soğutma.", "Odometre — Sürüş öncesi değeri not et. Sürüş sonrası doğru sayıyor mu? Aracı kapatıp açınca kaldığı yerden devam ediyor mu?"] },
+  { title: "Sürüş Testi (~3.500m Sabit Güzergah)", items: ["Düşük hız — 500m, 0→30 km/s. Titreme, silkelenme, anormal ses, çekişte kararsızlık var mı? Trim/tavan/torpido/kapı/cam sesi var mı?", "Fren — 30→0 x5 (~300m). Her frenlemede sağa/sola ekstrem çekme var mı? Anormal pedal, ses veya titreşim var mı?", "Sürekli frenleme — Dur-kalk min. 20x (~600m). Pedal sertleşmesi/boşalması, performans düşüşü veya koku var mı?", "Fren — 50→0 x5 (~400m). Her frenlemede sağa/sola ekstrem çekme var mı? Anormal pedal, ses, titreşim veya koku var mı?", "Fren — 90→0 / 80→0 / 70→0 (~500m). Her frenlemede sağa/sola ekstrem çekme var mı? Performans düşüşü veya koku var mı?", "Son hıza ulaşma (~600m) — ECO modda 90 km/s'ye ulaşıyor mu? SPORT modda 90 km/s'ye ulaşıyor mu?", "Yokuş çıkış + iniş (~400m) — Çıkışta geri kaçırma, çekiş düşmesi var mı? İnişte rejen açık/kapalı davranışı normal mi?", "Yokuş el freni (KRİTİK) — Yokuşta en az 6 kez kaydır-tut. El freni çek → hafif gaz → kayıyor mu? Kayma varsa video + SOC% + saat.", "N'de yokuş fren testi (~100m) — Yokuş aşağı N'de fren yap, bırak. Araç kendi kendine hareket ediyor mu?"] },
+  { title: "Fren Onay", items: ["Düşük hız fren genel — 30→0 testlerinde tutarlı performans sağlandı mı?", "Orta hız fren genel — 50→0 testlerinde tutarlı performans sağlandı mı?", "Yüksek hız fren genel — 90/80/70→0 testlerinde tutarlı performans sağlandı mı?", "FRENLERDE SIKMA VAR MI? (KRİTİK) — Anormal direnç, tek taraflı ısınma, koku veya sürtünme hissi var mı? Varsa video + foto + saat.", "Nihai Fren Onayı — Tüm fren testleri tamamlandı, anormal bulgu yok mu?"] },
+  { title: "Rot Onay", items: ["Rot ayarı — Düz/eğimsiz yolda direksiyonu bırak. Araç sola veya sağa çekiyor mu?", "Direksiyon merkezi — Düz gidişte direksiyon tam ortada mı? Belirgin sapma varsa foto + not al.", "Yüksek hızda kararlılık — 70-90 km/s'de araç düz gidiyor mu? Çekme veya titreşim var mı?"] },
+  { title: "Sıcak Sıkma Testi (Sürüş Sonrası)", items: ["Sol ön disk — Elini yaklaştır (dokunma). Diğer disklere kıyasla belirgin sıcak mı? Sıcaksa sıkma şüphesi; foto + not al.", "Sağ ön disk — Aynı kontrol. Belirgin şekilde sıcak mı?", "Sol arka disk — Aynı kontrol. Belirgin şekilde sıcak mı?", "Sağ arka disk — Aynı kontrol. Belirgin şekilde sıcak mı?", "N'de aracı ittir — Soğuk teste kıyasla artan direnç var mı? Isınma ile kötüleşiyorsa sıkma kesindir."] },
+  { title: "Mühendis & Kalite Kontrolü", items: ["Kapı / Kaput ayarı — Görsel kontrol. Fotoğraf ilet.", "Boya kalitesi — Görsel kontrol. Fotoğraf ilet.", "Trim & Bagaj — İç trim, dış trim düzgün mü? Bagaj yüksekliği doğru mu?", "Tam dönüş kontrolü — Düşük hızda tam sağ/sol manevra. Sürtme, vuruntu veya aks sesi var mı?", "DTC / Diyagnostik tarama — Aktif veya geçmiş hata varsa kayıt altına al. Tarama bitiş saatini not et.", "Mühendis Nihai Onayı"] },
 ];
 
-// Boş kalan istasyonlar için varsayılan şablon yok (kullanıcı kendi ekler).
-// Form geldikçe buraya yeni girişler eklenecek.
-const STATION_SEED_TEMPLATES = {
-  "fk-ee": EE_KONTROL_SUBE_ITEMS.map((text) => ({ id: text, text })),
-  "fk-suruş": SURUS_TEST_KARTI_ITEMS.map((text) => ({ id: text, text })),
-};
+// Fabrika 1 EE Kontrol / Sürüş Testi artık araç bazlı kanban formuna
+// taşındı (bkz. VehicleChecklistModal) — bu istasyon sayfalarının genel
+// checklist'i boş/düzenlenebilir başlıyor, diğer istasyonlarla aynı.
+const STATION_SEED_TEMPLATES = {};
 
 // Yönetilebilir üyelik/izin sistemi — her sekme (nav öğesi) burada bir
 // "sectionId" ile tanımlı. Admin, her kullanıcı için bu id'lerden hangisini
@@ -249,7 +168,13 @@ const GENEL_SEKMELER = [
   { id: "todo", label: "To-Do List" },
   { id: "raporlar", label: "Araç Akış Takibi" },
   { id: "grafik_yonetimi", label: "Grafik Yönetimi" },
-  { id: "uygunsuzluk", label: "Uygunsuzluk Takip" },
+];
+
+// Uygunsuzluk Yönetimi — açılır grup, 3 alt sayfa.
+const UYGUNSUZLUK_YONETIMI_ITEMS = [
+  { id: "uygunsuzluk_liste", label: "Uygunsuzluk Listesi" },
+  { id: "uygunsuzluk_hata_kodlari", label: "Hata Kodları" },
+  { id: "uygunsuzluk_istatistik", label: "Uygunsuzlukların İstatistiği" },
 ];
 
 const getAllSectionIds = (modules) => [
@@ -257,6 +182,7 @@ const getAllSectionIds = (modules) => [
   ...modules.map(m => m.id),
   ...FABRIKA_KONTROL_ITEMS.map(i => i.id),
   ...DEPO_KONTROL_ITEMS.map(i => i.id),
+  ...UYGUNSUZLUK_YONETIMI_ITEMS.map(i => i.id),
 ];
 
 const buildPermissionGroups = (modules) => [
@@ -265,6 +191,7 @@ const buildPermissionGroups = (modules) => [
   { title: "Toplantı Yönetimi", items: modules.filter(m => TOPLANTI_MODULE_IDS.includes(m.id)).map(m => ({ id: m.id, label: m.label })) },
   { title: "Fabrika Kontrol", items: FABRIKA_KONTROL_ITEMS },
   { title: "Depo Kontrol", items: DEPO_KONTROL_ITEMS },
+  { title: "Uygunsuzluk Yönetimi", items: UYGUNSUZLUK_YONETIMI_ITEMS },
 ];
 
 // Örnek/demo kullanıcılar (Ahmet Yılmaz, Selin Yıldız) kaldırıldı. Sistem
@@ -583,6 +510,7 @@ export default function App() {
   const [contacts, setContacts] = useState([]);
   const [stationData, setStationData] = useState({});
   const [uygunsuzluklar, setUygunsuzluklar] = useState([]);
+  const [hataKodlari, setHataKodlari] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const isRemoteUpdate = useRef(false);
 
@@ -596,7 +524,7 @@ export default function App() {
   const [newPasswordInput, setNewPasswordInput] = useState("");
 
   const [activeModule, setActiveModule] = useState("dashboard");
-  const [navExpanded, setNavExpanded] = useState({ toplanti: false, fabrika: false, depo: false });
+  const [navExpanded, setNavExpanded] = useState({ toplanti: false, fabrika: false, depo: false, uygunsuzluk: false });
   const toggleNavGroup = (key) => setNavExpanded(prev => ({ ...prev, [key]: !prev[key] }));
   const [dashboardFilter, setDashboardFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
@@ -664,6 +592,7 @@ export default function App() {
           const nextContacts = d.contacts || [];
           const nextStationData = d.stationData || {};
           const nextUygunsuzluklar = d.uygunsuzluklar || [];
+          const nextHataKodlari = d.hataKodlari || [];
 
           setUsersList(nextUsers);
           setTasks(nextTasks);
@@ -675,16 +604,18 @@ export default function App() {
           setContacts(nextContacts);
           setStationData(nextStationData);
           setUygunsuzluklar(nextUygunsuzluklar);
+          setHataKodlari(nextHataKodlari);
 
           if (v < DATA_VERSION) {
             setDoc(SHARED_DOC, {
               users: nextUsers, tasks: nextTasks, todos: nextTodos, chats: nextChats,
               notifications: nextNotifications, modules: nextModules, reports: nextReports,
-              contacts: nextContacts, stationData: nextStationData, uygunsuzluklar: nextUygunsuzluklar, version: DATA_VERSION,
+              contacts: nextContacts, stationData: nextStationData, uygunsuzluklar: nextUygunsuzluklar,
+              hataKodlari: nextHataKodlari, version: DATA_VERSION,
             }).catch(() => {});
           }
         } else {
-          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], stationData: {}, uygunsuzluklar: [], version: DATA_VERSION }).catch(() => {});
+          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], stationData: {}, uygunsuzluklar: [], hataKodlari: [], version: DATA_VERSION }).catch(() => {});
         }
         setDataLoaded(true);
       },
@@ -703,8 +634,8 @@ export default function App() {
   useEffect(() => {
     if (!dataLoaded) return;
     if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
-    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, version: DATA_VERSION }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
-  }, [usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, dataLoaded]);
+    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, version: DATA_VERSION }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
+  }, [usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, dataLoaded]);
 
   useEffect(() => {
     try {
@@ -903,8 +834,17 @@ export default function App() {
           {hasAccess("grafik_yonetimi") && (
             <button style={{ ...styles.navTab, ...(activeModule === "grafik_yonetimi" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("grafik_yonetimi")}><BarChart3 size={15} color="#38BDF8" /><span>Grafik Yönetimi</span></button>
           )}
-          {hasAccess("uygunsuzluk") && (
-            <button style={{ ...styles.navTab, ...(activeModule === "uygunsuzluk" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("uygunsuzluk")}><AlertTriangle size={15} color="#EF4444" /><span>Uygunsuzluk Takip</span></button>
+          {UYGUNSUZLUK_YONETIMI_ITEMS.some(i => hasAccess(i.id)) && (
+            <NavGroup label="Uygunsuzluk Yönetimi" icon={AlertTriangle} isOpen={navExpanded.uygunsuzluk} onToggle={() => toggleNavGroup("uygunsuzluk")}>
+              {UYGUNSUZLUK_YONETIMI_ITEMS.filter(i => hasAccess(i.id)).map((item) => {
+                const Icon = item.id === "uygunsuzluk_hata_kodlari" ? AlertCircle : item.id === "uygunsuzluk_istatistik" ? BarChart3 : AlertTriangle;
+                return (
+                  <button key={item.id} style={{ ...styles.navSubTab, ...(activeModule === item.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(item.id)}>
+                    <Icon size={13} color={activeModule === item.id ? "#F59E0B" : "#94A3B8"} /><span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </NavGroup>
           )}
           {currentUser.role === "admin" && (
             <button style={{ ...styles.navTab, ...(activeModule === "admin_panel" ? styles.navTabAdminActive : {}) }} onClick={() => setActiveModule("admin_panel")}><Lock size={15} color="#EF4444" /><span>Admin Panel</span></button>
@@ -937,11 +877,15 @@ export default function App() {
         ) : activeModule === "todo" ? (
           <TodoListView todos={todos} setTodos={setTodos} currentUser={currentUser} />
         ) : activeModule === "raporlar" ? (
-          <ReportsView reports={reports} setReports={setReports} currentUser={currentUser} />
+          <ReportsView reports={reports} setReports={setReports} currentUser={currentUser} onAddUygunsuzluk={(u) => setUygunsuzluklar(prev => [u, ...prev])} />
         ) : activeModule === "grafik_yonetimi" ? (
           <GrafikYonetimiView tasks={tasks} />
-        ) : activeModule === "uygunsuzluk" ? (
-          <UygunsuzlukTakipView uygunsuzluklar={uygunsuzluklar} setUygunsuzluklar={setUygunsuzluklar} currentUser={currentUser} />
+        ) : activeModule === "uygunsuzluk_liste" ? (
+          <UygunsuzlukTakipView uygunsuzluklar={uygunsuzluklar} setUygunsuzluklar={setUygunsuzluklar} currentUser={currentUser} hataKodlari={hataKodlari} />
+        ) : activeModule === "uygunsuzluk_hata_kodlari" ? (
+          <HataKodlariView hataKodlari={hataKodlari} setHataKodlari={setHataKodlari} />
+        ) : activeModule === "uygunsuzluk_istatistik" ? (
+          <UygunsuzlukIstatistikView uygunsuzluklar={uygunsuzluklar} />
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} contacts={contacts} setContacts={setContacts} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
         ) : FABRIKA_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
@@ -1475,10 +1419,13 @@ function TaskDetailModal({ task, currentUser, usersList, contacts, personOptions
   );
 }
 
-function ReportsView({ reports, setReports, currentUser }) {
+function ReportsView({ reports, setReports, currentUser, onAddUygunsuzluk }) {
   const [selectedId, setSelectedId] = useState(null);
   const [showNew, setShowNew] = useState(false);
-  const sorted = [...reports].sort((a, b) => (a.tarih < b.tarih ? 1 : -1));
+  const [filterText, setFilterText] = useState("");
+  const sorted = [...reports]
+    .filter(r => filterText.trim() === "" || `${r.baslik} ${r.hazirlayan} ${r.tarih}`.toLowerCase().includes(filterText.trim().toLowerCase()))
+    .sort((a, b) => (a.tarih < b.tarih ? 1 : -1));
   const selected = reports.find(r => r.id === selectedId);
 
   const nextSeq = () => reports.length ? Math.max(...reports.map(r => r.seq || 0)) + 1 : 1;
@@ -1504,32 +1451,32 @@ function ReportsView({ reports, setReports, currentUser }) {
         <button style={styles.primaryActionBtn} onClick={() => setShowNew(true)}><Plus size={16} /> Yeni Rapor</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selected ? "300px 1fr" : "1fr", gap: 20 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: selected ? "80vh" : "none", overflowY: selected ? "auto" : "visible" }}>
-          {sorted.length === 0 && <div style={{ color: "#64748B", textAlign: "center", padding: 30 }}>Henüz rapor eklenmedi.</div>}
-          {sorted.map(r => {
-            const fCount = (r.araclar || []).filter(a => a.konum === "fabrika1").length;
-            const dCount = (r.araclar || []).filter(a => a.konum === "depo" && a.asama !== "Serbestlik").length;
-            const sCount = (r.araclar || []).filter(a => a.asama === "Serbestlik").length;
-            return (
-              <div key={r.id} style={{ background: selectedId === r.id ? "#334155" : "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: 14, cursor: "pointer" }} className="hover-lift" onClick={() => setSelectedId(r.id)}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtDate(r.tarih)}</span>
-                  {canDelete(r) && <Trash2 size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} />}
+      <div style={{ display: "grid", gridTemplateColumns: selected ? "200px 1fr" : "260px 1fr", gap: 16 }}>
+        <div>
+          <div style={{ position: "relative", marginBottom: 10 }}>
+            <Search size={13} color="#64748B" style={{ position: "absolute", left: 9, top: 9 }} />
+            <input style={{ ...styles.mainInput, paddingLeft: 28, fontSize: 12 }} placeholder="Rapor ara..." value={filterText} onChange={e => setFilterText(e.target.value)} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "78vh", overflowY: "auto" }}>
+            {sorted.length === 0 && <div style={{ color: "#64748B", fontSize: 12, textAlign: "center", padding: 20 }}>{filterText ? "Sonuç yok." : "Henüz rapor eklenmedi."}</div>}
+            {sorted.map(r => {
+              const isSel = selectedId === r.id;
+              const sCount = (r.araclar || []).filter(a => a.asama === "Serbestlik").length;
+              const openCount = (r.araclar || []).length - sCount;
+              return (
+                <div key={r.id} style={{ background: isSel ? "#334155" : "#1E293B", border: isSel ? "1px solid #F59E0B" : "1px solid #334155", borderRadius: 8, padding: "9px 10px", cursor: "pointer" }} className="hover-lift" onClick={() => setSelectedId(r.id)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>{fmtDate(r.tarih)}</span>
+                    {canDelete(r) && <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer", flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} />}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 2 }}>v{r.seq} · {openCount} açık, {sCount} serbest</div>
                 </div>
-                <div style={{ fontSize: 12, color: "#E2E8F0", marginTop: 4, fontWeight: 600 }}>{r.baslik}</div>
-                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{r.hazirlayan} · v{r.seq}</div>
-                <div style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 11 }}>
-                  <span style={{ color: "#38BDF8" }}>{fCount} Fabrika 1</span>
-                  <span style={{ color: "#F59E0B" }}>{dCount} Depo</span>
-                  <span style={{ color: "#10B981" }}>{sCount} Serbest</span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        {selected && <ReportDetail report={selected} onUpdate={(upd) => setReports(reports.map(r => r.id === upd.id ? upd : r))} onClose={() => setSelectedId(null)} />}
+        {selected && <ReportDetail report={selected} onUpdate={(upd) => setReports(reports.map(r => r.id === upd.id ? upd : r))} onClose={() => setSelectedId(null)} currentUser={currentUser} onAddUygunsuzluk={onAddUygunsuzluk} />}
       </div>
 
       {showNew && <NewReportModal currentUser={currentUser} onClose={() => setShowNew(false)} onCreate={createReport} />}
@@ -1736,6 +1683,151 @@ function FinalKontrolModal({ vehicle, onClose, onSave }) {
   );
 }
 
+function VehicleChecklistModal({ vehicle, title, formNo, sections, headerFields, existing, onClose, onSave }) {
+  const flatItems = sections.flatMap(s => s.items.map(item => ({ section: s.title, item })));
+  const [header, setHeader] = useState(() => {
+    const h = {};
+    headerFields.forEach(f => { h[f.key] = existing?.[f.key] || (f.key === "vinNo" ? vehicle.no : f.default || ""); });
+    return h;
+  });
+  const [maddeler, setMaddeler] = useState(existing?.maddeler || flatItems.map(x => ({ ...x, sonuc: "", aciklama: "" })));
+
+  const setSonuc = (idx, sonuc) => setMaddeler(prev => prev.map((m, i) => i === idx ? { ...m, sonuc } : m));
+  const setAciklama = (idx, aciklama) => setMaddeler(prev => prev.map((m, i) => i === idx ? { ...m, aciklama } : m));
+
+  const nokSayisi = maddeler.filter(m => m.sonuc === "Uygun Değil").length;
+  const genelSonuc = maddeler.some(m => m.sonuc === "") ? "Devam Ediyor" : (nokSayisi > 0 ? "Kaldı" : "Geçti");
+
+  const save = () => { onSave({ ...header, maddeler, nokSayisi, genelSonuc, doldu: true }); onClose(); };
+
+  let runningIdx = -1;
+
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={{ ...styles.createModalContent, maxWidth: 680, maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={styles.drawerHeader}>
+          <h2 style={styles.formTitle}>{title} — Araç #{vehicle.no}</h2>
+          <button style={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+        </div>
+        <div style={{ fontSize: 10, color: "#64748B", marginBottom: 14 }}>Form no: {formNo}</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+          {headerFields.map(f => (
+            <div key={f.key}>
+              <label style={styles.inputLabel}>{f.label}</label>
+              <input type={f.type || "text"} style={f.type === "date" || f.type === "time" ? styles.selectInput : styles.mainInput} value={header[f.key]} onChange={e => setHeader(h => ({ ...h, [f.key]: e.target.value }))} />
+            </div>
+          ))}
+        </div>
+
+        {sections.map(section => (
+          <div key={section.title} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#F59E0B", marginBottom: 6 }}>▶ {section.title}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {section.items.map((itemText) => {
+                runningIdx++;
+                const idx = runningIdx;
+                const m = maddeler[idx];
+                return (
+                  <div key={idx} style={{ background: "#0F172A", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 12, flex: 1 }}>{itemText}</span>
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        <button type="button" style={{ ...styles.resultPill, ...(m.sonuc === "Uygun" ? styles.resultPillOk : {}) }} onClick={() => setSonuc(idx, "Uygun")}>Uygun</button>
+                        <button type="button" style={{ ...styles.resultPill, ...(m.sonuc === "Uygun Değil" ? styles.resultPillNok : {}) }} onClick={() => setSonuc(idx, "Uygun Değil")}>Uygun Değil</button>
+                      </div>
+                    </div>
+                    {m.sonuc === "Uygun Değil" && (
+                      <input style={{ ...styles.mainInput, fontSize: 11, marginTop: 6 }} placeholder="Neden? Açıklama yazın..." value={m.aciklama} onChange={e => setAciklama(idx, e.target.value)} autoFocus />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        <div style={{ marginTop: 8, padding: 12, background: "#0F172A", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12 }}>Uygun Değil: <b style={{ color: "#EF4444" }}>{nokSayisi}</b> / {maddeler.length}</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: genelSonuc === "Geçti" ? "#10B981" : genelSonuc === "Kaldı" ? "#EF4444" : "#F59E0B" }}>{genelSonuc}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button style={styles.ghostBtn} onClick={onClose}>Vazgeç</button>
+          <button style={styles.primaryActionBtn} onClick={save}>Kaydet</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReworkModal({ vehicle, onClose, onSave }) {
+  const [text, setText] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFile = (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    setProcessing(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 480;
+        let width = img.width, height = img.height;
+        if (width > height && width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        setImageDataUrl(canvas.toDataURL("image/jpeg", 0.7));
+        setProcessing(false);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const save = () => { if (!text.trim()) return; onSave({ text, gorsel: imageDataUrl }); };
+
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={{ ...styles.createModalContent, maxWidth: 460 }}>
+        <div style={styles.drawerHeader}>
+          <h2 style={styles.formTitle}>Rework / Hata Bildir — Araç #{vehicle.no}</h2>
+          <button style={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+          <div>
+            <label style={styles.inputLabel}>Açıklama</label>
+            <input style={styles.mainInput} placeholder="Hata / rework açıklaması..." value={text} onChange={e => setText(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Hata Görseli (opsiyonel)</label>
+            {imageDataUrl ? (
+              <div style={{ position: "relative", display: "inline-block", marginTop: 4 }}>
+                <img src={imageDataUrl} alt="Hata görseli" style={{ maxWidth: "100%", maxHeight: 220, borderRadius: 8, border: "1px solid #334155", display: "block" }} />
+                <button type="button" style={{ position: "absolute", top: 6, right: 6, background: "#EF4444", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setImageDataUrl(null)}><X size={13} color="#fff" /></button>
+              </div>
+            ) : (
+              <button type="button" style={{ ...styles.ghostBtn, width: "100%", padding: "18px 0", borderStyle: "dashed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }} onClick={() => fileInputRef.current?.click()} disabled={processing}>
+                <FileUp size={16} /> {processing ? "Yükleniyor..." : "Görsel Seç"}
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
+          </div>
+          <div style={{ fontSize: 10, color: "#64748B" }}>Bu kayıt görseliyle birlikte otomatik olarak Uygunsuzluk Takip listesine de eklenir.</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={styles.ghostBtn} onClick={onClose}>Vazgeç</button>
+            <button style={styles.primaryActionBtn} onClick={save}>Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getAdvanceInfo(v) {
   if (v.konum === "fabrika1") {
     const idx = FABRIKA1_STAGES.indexOf(v.asama);
@@ -1749,15 +1841,14 @@ function getAdvanceInfo(v) {
   return { label: nextStage === "Serbestlik" ? "Serbestliğe Sevk Et" : "Sonraki Aşama", next: { konum: "depo", asama: nextStage } };
 }
 
-function ReportDetail({ report, onUpdate, onClose }) {
+function ReportDetail({ report, onUpdate, onClose, currentUser, onAddUygunsuzluk }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(report.baslik);
   const [addingTo, setAddingTo] = useState(null); // { konum, asama } | null
   const [vehForm, setVehForm] = useState({ no: "", detay: "", tarih: todayStr() });
   const [editingVehId, setEditingVehId] = useState(null);
   const [editForm, setEditForm] = useState({ no: "", asama: "", detay: "", tarih: "" });
-  const [reworkFormFor, setReworkFormFor] = useState(null);
-  const [reworkText, setReworkText] = useState("");
+  const [reworkModalFor, setReworkModalFor] = useState(null); // vehId | null
   const [formModalFor, setFormModalFor] = useState(null); // { vehId, tip: "ee" | "final" } | null
 
   const araclar = report.araclar || [];
@@ -1811,19 +1902,74 @@ function ReportDetail({ report, onUpdate, onClose }) {
     onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, konum, asama, tarih: todayStr() } : a) });
   };
 
-  const addRework = (vehId) => {
-    if (!reworkText.trim()) return;
-    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: uid(), text: reworkText.trim(), tarih: todayStr(), done: false }] } : a) });
-    setReworkText("");
-    setReworkFormFor(null);
+  const addRework = (vehId, { text, gorsel }) => {
+    if (!text.trim()) return;
+    const vehicle = araclar.find(a => a.id === vehId);
+    const rwId = uid();
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: [...(a.reworklar || []), { id: rwId, text: text.trim(), tarih: todayStr(), done: false, gorsel: gorsel || null }] } : a) });
+    if (onAddUygunsuzluk && vehicle) {
+      onAddUygunsuzluk({
+        id: uid(),
+        tarih: todayStr(),
+        saat: new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+        yer: `${KONUM_META[vehicle.konum]?.label || vehicle.konum} — ${vehicle.asama}`,
+        aracVin: vehicle.no,
+        aciklama: text.trim(),
+        tespitEden: currentUser?.name || "—",
+        oncelik: "Orta",
+        durum: "acik",
+        aksiyon: "",
+        kapatan: null,
+        kapanmaTarihi: null,
+        gorsel: gorsel || null,
+        kaynakReworkId: rwId,
+      });
+    }
+    setReworkModalFor(null);
   };
 
   const toggleRework = (vehId, rwId) => onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.map(r => r.id === rwId ? { ...r, done: !r.done } : r) } : a) });
 
   const removeRework = (vehId, rwId) => onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, reworklar: a.reworklar.filter(r => r.id !== rwId) } : a) });
 
+  const FORM_KEY_MAP = { ee: "eeKontrol", final: "finalKontrol", "ee-fabrika": "eeKontrolFabrika", "suruş": "suruşTesti" };
+  const FORM_TITLES = { ee: "Depo — EE Kontrol", final: "Depo — Final Kontrol", "ee-fabrika": "Fabrika 1 — EE Kontrol", "suruş": "Fabrika 1 — Sürüş Testi" };
+  const isFail = (sonuc) => sonuc === "NOK" || sonuc === "Uygun Değil";
+
   const saveVehicleForm = (vehId, tip, data) => {
-    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, formVerisi: { ...(a.formVerisi || {}), [tip === "ee" ? "eeKontrol" : "finalKontrol"]: data } } : a) });
+    const vehicle = araclar.find(a => a.id === vehId);
+    const previousData = vehicle?.formVerisi?.[FORM_KEY_MAP[tip]];
+    // Bir öncesinde de "başarısız" olan maddelerin index'lerini tutuyoruz ki
+    // her yeniden kaydetmede aynı hata için tekrar tekrar uygunsuzluk kaydı
+    // oluşturulmasın — sadece YENİ başarısız olan maddeler için kayıt açılır.
+    const previousFailIdx = new Set(
+      (previousData?.maddeler || []).map((m, i) => (isFail(m.sonuc) ? i : null)).filter(i => i !== null)
+    );
+
+    onUpdate({ ...report, araclar: araclar.map(a => a.id === vehId ? { ...a, formVerisi: { ...(a.formVerisi || {}), [FORM_KEY_MAP[tip]]: data } } : a) });
+
+    if (onAddUygunsuzluk && vehicle) {
+      (data.maddeler || []).forEach((m, i) => {
+        if (isFail(m.sonuc) && !previousFailIdx.has(i)) {
+          onAddUygunsuzluk({
+            id: uid(),
+            tarih: data.tarih || todayStr(),
+            saat: new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+            yer: `${FORM_TITLES[tip]}${m.section ? " / " + m.section : ""}`,
+            aracVin: vehicle.no,
+            aciklama: `${m.item}${m.aciklama ? " — " + m.aciklama : ""}`,
+            tespitEden: data.kontrolEden || currentUser?.name || "—",
+            oncelik: "Orta",
+            durum: "acik",
+            aksiyon: "",
+            kapatan: null,
+            kapanmaTarihi: null,
+            gorsel: null,
+            kaynakForm: tip,
+          });
+        }
+      });
+    }
   };
 
   const exportPdf = () => {
@@ -1949,20 +2095,14 @@ function ReportDetail({ report, onUpdate, onClose }) {
                 {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
                 <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
                 {(v.reworklar || []).map(rw => (
-                  <div key={rw.id} style={{ fontSize: 10, marginTop: 3, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }} onClick={() => toggleRework(v.id, rw.id)}>
-                    {rw.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0 }} />}
+                  <div key={rw.id} style={{ fontSize: 10, marginTop: 4, display: "flex", alignItems: "flex-start", gap: 5, cursor: "pointer" }} onClick={() => toggleRework(v.id, rw.id)}>
+                    {rw.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0, marginTop: 1 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />}
+                    {rw.gorsel && <img src={rw.gorsel} alt="Hata görseli" style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4, border: "1px solid #334155", flexShrink: 0 }} />}
                     <span style={{ color: rw.done ? "#64748B" : "#FCA5A5", textDecoration: rw.done ? "line-through" : "none", flex: 1 }}>🔧 {rw.text}</span>
-                    <X size={9} style={{ cursor: "pointer", flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); removeRework(v.id, rw.id); }} />
+                    <X size={9} style={{ cursor: "pointer", flexShrink: 0, marginTop: 2 }} onClick={(e) => { e.stopPropagation(); removeRework(v.id, rw.id); }} />
                   </div>
                 ))}
-                {reworkFormFor === v.id ? (
-                  <div style={{ display: "flex", gap: 4, marginTop: 5 }}>
-                    <input style={{ ...styles.mainInput, fontSize: 10, padding: "4px 6px" }} placeholder="Rework açıklaması" value={reworkText} onChange={e => setReworkText(e.target.value)} />
-                    <button style={{ ...styles.addInlineBtn, fontSize: 10, padding: "0 8px" }} onClick={() => addRework(v.id)}>Ekle</button>
-                  </div>
-                ) : (
-                  <button style={styles.aracReworkBtn} onClick={() => setReworkFormFor(v.id)}>+ Rework</button>
-                )}
+                <button style={styles.aracReworkBtn} onClick={() => setReworkModalFor(v.id)}>+ Rework / Hata Bildir</button>
                 {advance && (
                   <button style={styles.aracAdvanceBtn} onClick={() => advanceVehicle(v)}>{advance.label} <ArrowRight size={11} /></button>
                 )}
@@ -1987,6 +2127,28 @@ function ReportDetail({ report, onUpdate, onClose }) {
                   ) : (
                     <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "final" })}>
                       <FileUp size={11} /> Final Kontrol Formunu Doldur
+                    </button>
+                  )
+                )}
+                {col.konum === "fabrika1" && col.asama === "EE Kontrol" && (
+                  v.formVerisi?.eeKontrolFabrika?.doldu ? (
+                    <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.eeKontrolFabrika.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.eeKontrolFabrika.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee-fabrika" })}>
+                      <FileText size={11} /> EE Kontrol: {v.formVerisi.eeKontrolFabrika.genelSonuc} ({v.formVerisi.eeKontrolFabrika.nokSayisi} Uygun Değil)
+                    </button>
+                  ) : (
+                    <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "ee-fabrika" })}>
+                      <FileUp size={11} /> EE Kontrol Formunu Doldur
+                    </button>
+                  )
+                )}
+                {col.konum === "fabrika1" && col.asama === "Sürüş Testi" && (
+                  v.formVerisi?.suruşTesti?.doldu ? (
+                    <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi.suruşTesti.genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi.suruşTesti.genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "suruş" })}>
+                      <FileText size={11} /> Sürüş Testi: {v.formVerisi.suruşTesti.genelSonuc} ({v.formVerisi.suruşTesti.nokSayisi} Uygun Değil)
+                    </button>
+                  ) : (
+                    <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: "suruş" })}>
+                      <FileUp size={11} /> Sürüş Test Kartını Doldur
                     </button>
                   )
                 )}
@@ -2098,6 +2260,52 @@ function ReportDetail({ report, onUpdate, onClose }) {
       )}
       {formModalFor && formModalFor.tip === "final" && (
         <FinalKontrolModal vehicle={araclar.find(a => a.id === formModalFor.vehId)} onClose={() => setFormModalFor(null)} onSave={(data) => saveVehicleForm(formModalFor.vehId, "final", data)} />
+      )}
+      {formModalFor && formModalFor.tip === "ee-fabrika" && (
+        <VehicleChecklistModal
+          vehicle={araclar.find(a => a.id === formModalFor.vehId)}
+          title="E/E Kontrol Formu (Fabrika 1 / Şube)"
+          formNo="KY.FR-18"
+          sections={EE_KONTROL_SUBE_SECTIONS}
+          headerFields={[
+            { key: "kontrolEden", label: "Kontrol Eden" },
+            { key: "tarih", label: "Tarih", type: "date", default: todayStr() },
+            { key: "vinNo", label: "VIN No" },
+            { key: "uretimIsEmriNo", label: "Üretim İş Emri No" },
+          ]}
+          existing={araclar.find(a => a.id === formModalFor.vehId)?.formVerisi?.eeKontrolFabrika}
+          onClose={() => setFormModalFor(null)}
+          onSave={(data) => saveVehicleForm(formModalFor.vehId, "ee-fabrika", data)}
+        />
+      )}
+      {formModalFor && formModalFor.tip === "suruş" && (
+        <VehicleChecklistModal
+          vehicle={araclar.find(a => a.id === formModalFor.vehId)}
+          title="EOL Sürüş Test Kartı"
+          formNo="KY.FR-13"
+          sections={SURUS_TEST_SECTIONS}
+          headerFields={[
+            { key: "kontrolEden", label: "Sürücü" },
+            { key: "tarih", label: "Tarih", type: "date", default: todayStr() },
+            { key: "vinNo", label: "VIN / Plaka" },
+            { key: "baslangicSaat", label: "Başlangıç Saat", type: "time" },
+            { key: "bitisSaat", label: "Bitiş Saat", type: "time" },
+            { key: "socBaslangic", label: "SOC Başlangıç (%)" },
+            { key: "socBitis", label: "SOC Bitiş (%)" },
+            { key: "odoBaslangic", label: "Odo Başlangıç (km)" },
+            { key: "odoBitis", label: "Odo Bitiş (km)" },
+          ]}
+          existing={araclar.find(a => a.id === formModalFor.vehId)?.formVerisi?.suruşTesti}
+          onClose={() => setFormModalFor(null)}
+          onSave={(data) => saveVehicleForm(formModalFor.vehId, "suruş", data)}
+        />
+      )}
+      {reworkModalFor && (
+        <ReworkModal
+          vehicle={araclar.find(a => a.id === reworkModalFor)}
+          onClose={() => setReworkModalFor(null)}
+          onSave={(data) => addRework(reworkModalFor, data)}
+        />
       )}
     </div>
   );
@@ -2284,13 +2492,15 @@ const UYGUNSUZLUK_DURUMLAR = [
 ];
 const UYGUNSUZLUK_ONCELIK = ["Düşük", "Orta", "Yüksek", "Kritik"];
 
-function UygunsuzlukTakipView({ uygunsuzluklar, setUygunsuzluklar, currentUser }) {
+function UygunsuzlukTakipView({ uygunsuzluklar, setUygunsuzluklar, currentUser, hataKodlari }) {
   const [showNew, setShowNew] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [vinFilter, setVinFilter] = useState("");
   const selected = uygunsuzluklar.find(u => u.id === selectedId);
+  const filtered = vinFilter.trim() === "" ? uygunsuzluklar : uygunsuzluklar.filter(u => (u.aracVin || "").toLowerCase().includes(vinFilter.trim().toLowerCase()));
 
   const createRecord = (form) => {
-    const kayit = { id: uid(), tarih: form.tarih, saat: form.saat, yer: form.yer, aracVin: form.aracVin, aciklama: form.aciklama, tespitEden: form.tespitEden, oncelik: form.oncelik, durum: "acik", aksiyon: "", kapatan: null, kapanmaTarihi: null };
+    const kayit = { id: uid(), tarih: form.tarih, saat: form.saat, yer: form.yer, aracVin: form.aracVin, aciklama: form.aciklama, tespitEden: form.tespitEden, oncelik: form.oncelik, hataKodu: form.hataKodu || "", durum: "acik", aksiyon: "", kapatan: null, kapanmaTarihi: null };
     setUygunsuzluklar([kayit, ...uygunsuzluklar]);
     setShowNew(false);
   };
@@ -2304,13 +2514,18 @@ function UygunsuzlukTakipView({ uygunsuzluklar, setUygunsuzluklar, currentUser }
   return (
     <div style={styles.viewContainer}>
       <div style={styles.yearEndHeader}>
-        <div><h1 style={styles.viewTitle}>Uygunsuzluk Takip</h1><p style={styles.viewSub}>Tespit edilen yer, saat ve araç VIN numarasıyla izlenebilir uygunsuzluk kaydı.</p></div>
+        <div><h1 style={styles.viewTitle}>Uygunsuzluk Listesi</h1><p style={styles.viewSub}>Tespit edilen yer, saat ve araç VIN numarasıyla izlenebilir uygunsuzluk kaydı.</p></div>
         <button style={styles.primaryActionBtn} onClick={() => setShowNew(true)}><Plus size={16} /> Yeni Uygunsuzluk</button>
+      </div>
+
+      <div style={{ position: "relative", maxWidth: 280 }} className="no-print">
+        <Search size={13} color="#64748B" style={{ position: "absolute", left: 9, top: 9 }} />
+        <input style={{ ...styles.mainInput, paddingLeft: 28, fontSize: 12 }} placeholder="Araç VIN No ile filtrele..." value={vinFilter} onChange={e => setVinFilter(e.target.value)} />
       </div>
 
       <div style={styles.kanbanGrid}>
         {UYGUNSUZLUK_DURUMLAR.map(stage => {
-          const list = uygunsuzluklar.filter(u => u.durum === stage.id);
+          const list = filtered.filter(u => u.durum === stage.id);
           return (
             <div key={stage.id} style={styles.kanbanColumn} onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }} onDrop={e => { e.preventDefault(); const id = e.dataTransfer.getData("text"); if (id) moveTo(id, stage.id); }}>
               <div style={{ ...styles.kanbanColumnHeader, borderTopColor: stage.color }}><span style={{ fontWeight: 800, fontSize: 13, color: stage.color }}>{stage.label}</span><span style={styles.kanbanBadge}>{list.length}</span></div>
@@ -2321,7 +2536,10 @@ function UygunsuzlukTakipView({ uygunsuzluklar, setUygunsuzluklar, currentUser }
                       <span style={{ fontSize: 10, fontWeight: 800, color: oncelikColor(u.oncelik) }}>{u.oncelik}</span>
                       <span style={{ fontSize: 10, color: "#64748B" }}>{fmtDate(u.tarih)} {u.saat}</span>
                     </div>
-                    <div style={styles.kanbanCardTitle}>{u.aciklama}</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 4 }}>
+                      {u.gorsel && <img src={u.gorsel} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid #334155", flexShrink: 0 }} />}
+                      <div style={{ ...styles.kanbanCardTitle, marginTop: 0 }}>{u.hataKodu && <span style={{ color: "#F59E0B", fontFamily: "monospace" }}>[{u.hataKodu}] </span>}{u.aciklama}</div>
+                    </div>
                     <div style={styles.kanbanCardFooter}>
                       <span>📍 {u.yer || "—"}</span>
                       {u.aracVin && <span>🚗 {u.aracVin}</span>}
@@ -2335,13 +2553,13 @@ function UygunsuzlukTakipView({ uygunsuzluklar, setUygunsuzluklar, currentUser }
         })}
       </div>
 
-      {showNew && <NewUygunsuzlukModal currentUser={currentUser} onClose={() => setShowNew(false)} onCreate={createRecord} />}
-      {selected && <UygunsuzlukDetailModal record={selected} onClose={() => setSelectedId(null)} onUpdate={(patch) => updateRecord(selected.id, patch)} onDelete={() => deleteRecord(selected.id)} onMove={(durum) => moveTo(selected.id, durum)} />}
+      {showNew && <NewUygunsuzlukModal currentUser={currentUser} hataKodlari={hataKodlari} onClose={() => setShowNew(false)} onCreate={createRecord} />}
+      {selected && <UygunsuzlukDetailModal record={selected} hataKodlari={hataKodlari} onClose={() => setSelectedId(null)} onUpdate={(patch) => updateRecord(selected.id, patch)} onDelete={() => deleteRecord(selected.id)} onMove={(durum) => moveTo(selected.id, durum)} />}
     </div>
   );
 }
 
-function NewUygunsuzlukModal({ currentUser, onClose, onCreate }) {
+function NewUygunsuzlukModal({ currentUser, hataKodlari, onClose, onCreate }) {
   const now = new Date();
   const [form, setForm] = useState({
     tarih: todayStr(),
@@ -2351,6 +2569,7 @@ function NewUygunsuzlukModal({ currentUser, onClose, onCreate }) {
     aciklama: "",
     tespitEden: currentUser?.name || "",
     oncelik: "Orta",
+    hataKodu: "",
   });
   return (
     <div style={styles.modalOverlay}>
@@ -2364,6 +2583,15 @@ function NewUygunsuzlukModal({ currentUser, onClose, onCreate }) {
           <div><label style={styles.inputLabel}>Tespit Edilen Yer</label><input style={styles.mainInput} placeholder="Örn: EE Kontrol istasyonu, Depo..." value={form.yer} onChange={e => setForm(f => ({ ...f, yer: e.target.value }))} /></div>
           <div><label style={styles.inputLabel}>Araç VIN No (varsa)</label><input style={styles.mainInput} value={form.aracVin} onChange={e => setForm(f => ({ ...f, aracVin: e.target.value }))} /></div>
           <div><label style={styles.inputLabel}>Açıklama</label><input style={styles.mainInput} placeholder="Uygunsuzluğu açıklayın..." value={form.aciklama} onChange={e => setForm(f => ({ ...f, aciklama: e.target.value }))} /></div>
+          {hataKodlari && hataKodlari.length > 0 && (
+            <div>
+              <label style={styles.inputLabel}>Hata Kodu (opsiyonel)</label>
+              <select style={styles.selectInput} value={form.hataKodu} onChange={e => setForm(f => ({ ...f, hataKodu: e.target.value }))}>
+                <option value="">— Seçilmedi —</option>
+                {hataKodlari.map(h => <option key={h.id} value={h.kod}>{h.kod} — {h.aciklama}</option>)}
+              </select>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1 }}><label style={styles.inputLabel}>Tespit Eden</label><input style={styles.mainInput} value={form.tespitEden} onChange={e => setForm(f => ({ ...f, tespitEden: e.target.value }))} /></div>
             <div style={{ flex: 1 }}>
@@ -2383,8 +2611,9 @@ function NewUygunsuzlukModal({ currentUser, onClose, onCreate }) {
   );
 }
 
-function UygunsuzlukDetailModal({ record, onClose, onUpdate, onDelete, onMove }) {
+function UygunsuzlukDetailModal({ record, hataKodlari, onClose, onUpdate, onDelete, onMove }) {
   const [aksiyon, setAksiyon] = useState(record.aksiyon || "");
+  const [hataKodu, setHataKodu] = useState(record.hataKodu || "");
   const stage = UYGUNSUZLUK_DURUMLAR.find(s => s.id === record.durum);
   return (
     <div style={styles.modalOverlay}>
@@ -2394,6 +2623,7 @@ function UygunsuzlukDetailModal({ record, onClose, onUpdate, onDelete, onMove })
           <button style={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
         <div style={styles.drawerBody}>
+          {record.gorsel && <img src={record.gorsel} alt="Uygunsuzluk görseli" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, border: "1px solid #334155" }} />}
           <div style={{ fontSize: 14, fontWeight: 700 }}>{record.aciklama}</div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "#94A3B8" }}>
             <span>📅 {fmtDate(record.tarih)} {record.saat}</span>
@@ -2401,6 +2631,16 @@ function UygunsuzlukDetailModal({ record, onClose, onUpdate, onDelete, onMove })
             {record.aracVin && <span>🚗 VIN: {record.aracVin}</span>}
           </div>
           <div style={{ fontSize: 12, color: "#94A3B8" }}>Tespit Eden: <b style={{ color: "#F8FAFC" }}>{record.tespitEden}</b> · Öncelik: <b style={{ color: "#F8FAFC" }}>{record.oncelik}</b></div>
+
+          {hataKodlari && hataKodlari.length > 0 && (
+            <div>
+              <label style={styles.inputLabel}>Hata Kodu</label>
+              <select style={styles.selectInput} value={hataKodu} onChange={e => { setHataKodu(e.target.value); onUpdate({ hataKodu: e.target.value }); }}>
+                <option value="">— Seçilmedi —</option>
+                {hataKodlari.map(h => <option key={h.id} value={h.kod}>{h.kod} — {h.aciklama}</option>)}
+              </select>
+            </div>
+          )}
 
           <div>
             <label style={styles.inputLabel}>Aksiyon / Düzeltme</label>
@@ -2418,6 +2658,138 @@ function UygunsuzlukDetailModal({ record, onClose, onUpdate, onDelete, onMove })
           </div>
         </div>
         <div style={styles.drawerFooter}><button style={styles.deleteDangerBtn} onClick={onDelete}>Sil</button><button style={styles.primaryActionBtn} onClick={onClose}>Kapat</button></div>
+      </div>
+    </div>
+  );
+}
+
+function HataKodlariView({ hataKodlari, setHataKodlari }) {
+  const [kod, setKod] = useState("");
+  const [aciklama, setAciklama] = useState("");
+
+  const addKod = () => {
+    if (!kod.trim() || !aciklama.trim()) return;
+    if (hataKodlari.some(h => h.kod.toLowerCase() === kod.trim().toLowerCase())) { window.alert("Bu kod zaten kayıtlı."); return; }
+    setHataKodlari([...hataKodlari, { id: uid(), kod: kod.trim(), aciklama: aciklama.trim() }]);
+    setKod(""); setAciklama("");
+  };
+  const removeKod = (id) => { if (window.confirm("Bu hata kodunu silmek istediğinize emin misiniz?")) setHataKodlari(hataKodlari.filter(h => h.id !== id)); };
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div><h1 style={styles.viewTitle}>Hata Kodları</h1><p style={styles.viewSub}>Uygunsuzluk kayıtlarında seçilebilecek standart hata kodu kataloğu.</p></div>
+      </div>
+      <div style={styles.yearEndTableCard}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <input style={{ ...styles.mainInput, maxWidth: 140 }} placeholder="Kod (örn: K-001)" value={kod} onChange={e => setKod(e.target.value)} onKeyDown={e => e.key === "Enter" && addKod()} />
+          <input style={{ ...styles.mainInput, flex: 1, minWidth: 200 }} placeholder="Açıklama" value={aciklama} onChange={e => setAciklama(e.target.value)} onKeyDown={e => e.key === "Enter" && addKod()} />
+          <button style={styles.primaryActionBtn} onClick={addKod}><Plus size={14} /> Ekle</button>
+        </div>
+        {hataKodlari.length === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Henüz hata kodu tanımlanmadı.</div> : (
+          <table style={styles.table}>
+            <thead><tr><th style={styles.th}>Kod</th><th style={styles.th}>Açıklama</th><th style={styles.th}></th></tr></thead>
+            <tbody>
+              {hataKodlari.map(h => (
+                <tr key={h.id} style={styles.tr}>
+                  <td style={{ ...styles.td, fontFamily: "monospace", fontWeight: 700, color: "#F59E0B" }}>{h.kod}</td>
+                  <td style={styles.td}>{h.aciklama}</td>
+                  <td style={styles.td}><Trash2 size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeKod(h.id)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UygunsuzlukIstatistikView({ uygunsuzluklar }) {
+  const total = uygunsuzluklar.length;
+  const durumData = UYGUNSUZLUK_DURUMLAR.map(s => ({ ...s, count: uygunsuzluklar.filter(u => u.durum === s.id).length }));
+  const oncelikColors = { "Kritik": "#EF4444", "Yüksek": "#F59E0B", "Orta": "#38BDF8", "Düşük": "#94A3B8" };
+  const oncelikData = UYGUNSUZLUK_ONCELIK.map(o => ({ label: o, color: oncelikColors[o], count: uygunsuzluklar.filter(u => u.oncelik === o).length }));
+
+  const countBy = (key) => {
+    const map = {};
+    uygunsuzluklar.forEach(u => { const v = u[key] || "Belirtilmemiş"; map[v] = (map[v] || 0) + 1; });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  };
+  const yerData = countBy("yer").slice(0, 8);
+  const vinData = countBy("aracVin").slice(0, 8);
+  const kodData = countBy("hataKodu").filter(([k]) => k !== "Belirtilmemiş").slice(0, 8);
+
+  const kapatilanlar = uygunsuzluklar.filter(u => u.durum === "kapatildi" && u.kapanmaTarihi);
+  const ortalamaGun = kapatilanlar.length > 0
+    ? Math.round(kapatilanlar.reduce((sum, u) => sum + Math.max(0, (new Date(u.kapanmaTarihi) - new Date(u.tarih)) / 86400000), 0) / kapatilanlar.length)
+    : null;
+
+  const maxDurum = Math.max(1, ...durumData.map(d => d.count));
+  const maxOncelik = Math.max(1, ...oncelikData.map(d => d.count));
+  const maxYer = Math.max(1, ...yerData.map(([, c]) => c));
+  const maxVin = Math.max(1, ...vinData.map(([, c]) => c));
+  const maxKod = Math.max(1, ...kodData.map(([, c]) => c));
+
+  const bar = (label, count, max, color) => (
+    <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+      <span style={{ fontSize: 11, width: 130, flexShrink: 0, color: "#CBD5E1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={label}>{label}</span>
+      <div style={{ flex: 1, background: "#0F172A", borderRadius: 6, height: 14, overflow: "hidden" }}>
+        <div style={{ width: `${(count / max) * 100}%`, height: "100%", background: color }} />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 700, width: 20, textAlign: "right" }}>{count}</span>
+    </div>
+  );
+
+  const exportPdf = () => {
+    const prevTitle = document.title;
+    document.title = `${todayStr()}_Uygunsuzluk_Istatistik_Raporu`;
+    window.print();
+    setTimeout(() => { document.title = prevTitle; }, 800);
+  };
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div><h1 style={styles.viewTitle}>Uygunsuzlukların İstatistiği</h1><p style={styles.viewSub}>Yönetim için özet istatistik ve grafikler.</p></div>
+        <button style={styles.printBtn} className="no-print" onClick={exportPdf}><Printer size={15} /> PDF Olarak İndir</button>
+      </div>
+
+      <div id="print-area">
+        <div className="print-only" style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 4 }}>UYGUNSUZLUKLARIN İSTATİSTİK RAPORU</div>
+        <div className="print-only" style={{ fontSize: 11, textAlign: "center", marginBottom: 16 }}>Rapor Tarihi: {fmtDate(todayStr())}</div>
+
+        <div style={styles.dashboardCardGrid}>
+          <div style={{ ...styles.dashCard, borderLeftColor: "#94A3B8" }}><div style={styles.dashCardTitle}>Toplam Kayıt</div><div style={styles.dashCardValue}>{total}</div></div>
+          <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Açık</div><div style={styles.dashCardValue}>{durumData.find(d => d.id === "acik")?.count || 0}</div></div>
+          <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Kapatıldı</div><div style={styles.dashCardValue}>{durumData.find(d => d.id === "kapatildi")?.count || 0}</div></div>
+          <div style={{ ...styles.dashCard, borderLeftColor: "#38BDF8" }}><div style={styles.dashCardTitle}>Ort. Kapanma Süresi</div><div style={styles.dashCardValue}>{ortalamaGun !== null ? `${ortalamaGun} gün` : "—"}</div></div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 13, fontWeight: 800, color: "#F59E0B", marginBottom: 14 }}>Duruma Göre Dağılım</h3>
+            {total === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Henüz veri yok.</div> : durumData.map(d => bar(d.label, d.count, maxDurum, d.color))}
+          </div>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 13, fontWeight: 800, color: "#F59E0B", marginBottom: 14 }}>Önceliğe Göre Dağılım</h3>
+            {total === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Henüz veri yok.</div> : oncelikData.map(d => bar(d.label, d.count, maxOncelik, d.color))}
+          </div>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 13, fontWeight: 800, color: "#38BDF8", marginBottom: 14 }}>Yere Göre Dağılım (İlk 8)</h3>
+            {yerData.length === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Henüz veri yok.</div> : yerData.map(([label, count]) => bar(label, count, maxYer, "#38BDF8"))}
+          </div>
+          <div style={styles.yearEndTableCard}>
+            <h3 style={{ fontSize: 13, fontWeight: 800, color: "#B07FE0", marginBottom: 14 }}>Araç VIN'e Göre Dağılım (İlk 8)</h3>
+            {vinData.length === 0 ? <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>Henüz veri yok.</div> : vinData.map(([label, count]) => bar(`#${label}`, count, maxVin, "#B07FE0"))}
+          </div>
+          {kodData.length > 0 && (
+            <div style={{ ...styles.yearEndTableCard, gridColumn: "1 / -1" }}>
+              <h3 style={{ fontSize: 13, fontWeight: 800, color: "#F87171", marginBottom: 14 }}>Hata Koduna Göre Dağılım (İlk 8)</h3>
+              {kodData.map(([label, count]) => bar(label, count, maxKod, "#F87171"))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
