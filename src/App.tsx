@@ -229,6 +229,7 @@ const GENEL_SEKMELER = [
   { id: "todo", label: "To-Do List" },
   { id: "raporlar", label: "Araç Akış Takibi" },
   { id: "grafik_yonetimi", label: "Grafik Yönetimi" },
+  { id: "fabrika_kontrol_akis", label: "Fabrika Kontrol" },
 ];
 
 // Uygunsuzluk Yönetimi — açılır grup, 3 alt sayfa.
@@ -241,7 +242,6 @@ const UYGUNSUZLUK_YONETIMI_ITEMS = [
 const getAllSectionIds = (modules) => [
   ...GENEL_SEKMELER.map(s => s.id),
   ...modules.map(m => m.id),
-  ...FABRIKA_KONTROL_ITEMS.map(i => i.id),
   ...DEPO_KONTROL_ITEMS.map(i => i.id),
   ...UYGUNSUZLUK_YONETIMI_ITEMS.map(i => i.id),
 ];
@@ -250,7 +250,6 @@ const buildPermissionGroups = (modules) => [
   { title: "Genel", items: GENEL_SEKMELER },
   { title: "Modüller", items: modules.filter(m => !TOPLANTI_MODULE_IDS.includes(m.id)).map(m => ({ id: m.id, label: m.label })) },
   { title: "Toplantı Yönetimi", items: modules.filter(m => TOPLANTI_MODULE_IDS.includes(m.id)).map(m => ({ id: m.id, label: m.label })) },
-  { title: "Fabrika Kontrol", items: FABRIKA_KONTROL_ITEMS },
   { title: "Depo Kontrol", items: DEPO_KONTROL_ITEMS },
   { title: "Uygunsuzluk Yönetimi", items: UYGUNSUZLUK_YONETIMI_ITEMS },
 ];
@@ -570,6 +569,7 @@ export default function App() {
   const [reports, setReports] = useState(INITIAL_REPORTS);
   const [contacts, setContacts] = useState([]);
   const [stationData, setStationData] = useState({});
+  const [fabrikaAkisi, setFabrikaAkisi] = useState({ araclar: [] });
   const [uygunsuzluklar, setUygunsuzluklar] = useState([]);
   const [hataKodlari, setHataKodlari] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -654,6 +654,7 @@ export default function App() {
           const nextStationData = d.stationData || {};
           const nextUygunsuzluklar = d.uygunsuzluklar || [];
           const nextHataKodlari = d.hataKodlari || [];
+          const nextFabrikaAkisi = d.fabrikaAkisi || { araclar: [] };
 
           setUsersList(nextUsers);
           setTasks(nextTasks);
@@ -666,17 +667,18 @@ export default function App() {
           setStationData(nextStationData);
           setUygunsuzluklar(nextUygunsuzluklar);
           setHataKodlari(nextHataKodlari);
+          setFabrikaAkisi(nextFabrikaAkisi);
 
           if (v < DATA_VERSION) {
             setDoc(SHARED_DOC, {
               users: nextUsers, tasks: nextTasks, todos: nextTodos, chats: nextChats,
               notifications: nextNotifications, modules: nextModules, reports: nextReports,
               contacts: nextContacts, stationData: nextStationData, uygunsuzluklar: nextUygunsuzluklar,
-              hataKodlari: nextHataKodlari, version: DATA_VERSION,
+              hataKodlari: nextHataKodlari, fabrikaAkisi: nextFabrikaAkisi, version: DATA_VERSION,
             }).catch(() => {});
           }
         } else {
-          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], stationData: {}, uygunsuzluklar: [], hataKodlari: [], version: DATA_VERSION }).catch(() => {});
+          setDoc(SHARED_DOC, { users: INITIAL_USERS, tasks: INITIAL_TASKS, todos: INITIAL_TODOS, chats: INITIAL_CHATS, notifications: [], modules: INITIAL_MODULES, reports: INITIAL_REPORTS, contacts: [], stationData: {}, uygunsuzluklar: [], hataKodlari: [], fabrikaAkisi: { araclar: [] }, version: DATA_VERSION }).catch(() => {});
         }
         setDataLoaded(true);
       },
@@ -695,8 +697,8 @@ export default function App() {
   useEffect(() => {
     if (!dataLoaded) return;
     if (isRemoteUpdate.current) { isRemoteUpdate.current = false; return; }
-    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, version: DATA_VERSION }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
-  }, [usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, dataLoaded]);
+    setDoc(SHARED_DOC, { users: usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, fabrikaAkisi, version: DATA_VERSION }, { merge: true }).catch((e) => setError("Kaydedilemedi: " + e.message));
+  }, [usersList, tasks, todos, chats, notifications, modules, reports, contacts, stationData, uygunsuzluklar, hataKodlari, fabrikaAkisi, dataLoaded]);
 
   useEffect(() => {
     try {
@@ -869,15 +871,9 @@ export default function App() {
             </NavGroup>
           )}
 
-          {/* Fabrika Kontrol — açılır grup */}
-          {FABRIKA_KONTROL_ITEMS.some(i => hasAccess(i.id)) && (
-            <NavGroup label="Fabrika Kontrol" icon={Zap} isOpen={navExpanded.fabrika} onToggle={() => toggleNavGroup("fabrika")}>
-              {FABRIKA_KONTROL_ITEMS.filter(i => hasAccess(i.id)).map((item) => (
-                <button key={item.id} style={{ ...styles.navSubTab, ...(activeModule === item.id ? styles.navTabActive : {}) }} onClick={() => setActiveModule(item.id)}>
-                  <CheckSquare size={13} color={activeModule === item.id ? "#F59E0B" : "#94A3B8"} /><span>{item.label}</span>
-                </button>
-              ))}
-            </NavGroup>
+          {/* Fabrika Kontrol — artık tek sayfa (8 istasyonlu akış kanban) */}
+          {hasAccess("fabrika_kontrol_akis") && (
+            <button style={{ ...styles.navTab, ...(activeModule === "fabrika_kontrol_akis" ? styles.navTabActive : {}) }} onClick={() => setActiveModule("fabrika_kontrol_akis")}><Zap size={15} color="#38BDF8" /><span>Fabrika Kontrol</span></button>
           )}
 
           {/* Depo Kontrol — açılır grup */}
@@ -949,8 +945,8 @@ export default function App() {
           <UygunsuzlukIstatistikView uygunsuzluklar={uygunsuzluklar} />
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} contacts={contacts} setContacts={setContacts} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
-        ) : FABRIKA_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
-          <IstasyonAracView key={activeModule} stationId={activeModule} title={FABRIKA_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Fabrika Kontrol" reports={reports} onNavigate={setActiveModule} />
+        ) : activeModule === "fabrika_kontrol_akis" ? (
+          <FabrikaAkisiView fabrikaAkisi={fabrikaAkisi} onUpdate={setFabrikaAkisi} />
         ) : DEPO_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
           <IstasyonAracView key={activeModule} stationId={activeModule} title={DEPO_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Depo Kontrol" reports={reports} onNavigate={setActiveModule} />
         ) : modules.some(m => m.id === activeModule) ? (
@@ -2418,6 +2414,188 @@ const STATION_ASAMA_MAP = {
   "dk-final": { konum: "depo", asama: "Final Kontrol" },
 };
 const STATION_FORM_KEY_MAP = { "fk-ee": "eeKontrolFabrika", "fk-suruş": "suruşTesti", "dk-ee": "eeKontrol", "dk-final": "finalKontrol" };
+
+function NoteQuickModal({ vehicleNo, onClose, onSave }) {
+  const [text, setText] = useState("");
+  const save = () => { if (text.trim()) onSave(text.trim()); };
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={{ ...styles.createModalContent, maxWidth: 420 }}>
+        <div style={styles.drawerHeader}><h2 style={styles.formTitle}>Not / Sorun Ekle — Araç #{vehicleNo}</h2><button style={styles.closeBtn} onClick={onClose}><X size={18} /></button></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
+          <input style={styles.mainInput} placeholder="Akışı aksatan sorunu yazın..." value={text} onChange={e => setText(e.target.value)} autoFocus onKeyDown={e => e.key === "Enter" && save()} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={styles.ghostBtn} onClick={onClose}>Vazgeç</button>
+            <button style={styles.primaryActionBtn} onClick={save}>Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FabrikaAkisiView({ fabrikaAkisi, onUpdate }) {
+  const [addingTo, setAddingTo] = useState(null);
+  const [vehForm, setVehForm] = useState({ no: "", detay: "", tarih: todayStr() });
+  const [editingVehId, setEditingVehId] = useState(null);
+  const [editForm, setEditForm] = useState({ no: "", detay: "" });
+  const [noteModalFor, setNoteModalFor] = useState(null);
+  const [formModalFor, setFormModalFor] = useState(null);
+
+  const araclar = fabrikaAkisi?.araclar || [];
+  const stages = FABRIKA_KONTROL_ITEMS;
+  const shortLabel = (label) => label.replace(/^İstasyon \d+ — /, "");
+
+  const moveVehicle = (vehId, istasyonId) => onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === vehId ? { ...a, istasyonId, tarih: todayStr() } : a) });
+
+  const addVehicle = () => {
+    if (!vehForm.no.trim()) return;
+    const yeni = { id: uid(), no: vehForm.no.trim(), istasyonId: addingTo, detay: vehForm.detay.trim(), tarih: vehForm.tarih, notlar: [], formVerisi: {} };
+    onUpdate({ ...fabrikaAkisi, araclar: [...araclar, yeni] });
+    setVehForm({ no: "", detay: "", tarih: todayStr() });
+    setAddingTo(null);
+  };
+  const removeVehicle = (id) => onUpdate({ ...fabrikaAkisi, araclar: araclar.filter(a => a.id !== id) });
+  const openEditForm = (v) => { setEditingVehId(v.id); setEditForm({ no: v.no, detay: v.detay }); };
+  const saveEdit = () => { onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === editingVehId ? { ...a, ...editForm } : a) }); setEditingVehId(null); };
+
+  const addNote = (vehId, text) => onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === vehId ? { ...a, notlar: [...(a.notlar || []), { id: uid(), text, tarih: todayStr(), done: false }] } : a) });
+  const toggleNote = (vehId, noteId) => onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === vehId ? { ...a, notlar: a.notlar.map(n => n.id === noteId ? { ...n, done: !n.done } : n) } : a) });
+  const removeNote = (vehId, noteId) => onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === vehId ? { ...a, notlar: a.notlar.filter(n => n.id !== noteId) } : a) });
+
+  const saveVehicleForm = (vehId, tip, data) => onUpdate({ ...fabrikaAkisi, araclar: araclar.map(a => a.id === vehId ? { ...a, formVerisi: { ...(a.formVerisi || {}), [tip === "ee" ? "eeKontrolFabrika" : "suruşTesti"]: data } } : a) });
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div><h1 style={styles.viewTitle}>Fabrika Kontrol — Fabrika Akışı</h1><p style={styles.viewSub}>İstasyon 1'den 8'e araç akışı — araçları sürükleyerek ilerletin, akışı aksatan bir sorun varsa not ekleyin.</p></div>
+      </div>
+
+      <div style={styles.aracKanbanScroll}>
+        {stages.map((stage, idx) => {
+          const stageVehicles = araclar.filter(a => a.istasyonId === stage.id);
+          const nextStage = stages[idx + 1];
+          const hasForm = stage.id === "fk-ee" || stage.id === "fk-suruş";
+          const formKey = stage.id === "fk-ee" ? "eeKontrolFabrika" : "suruşTesti";
+          const formTip = stage.id === "fk-ee" ? "ee-fabrika" : "suruş";
+          return (
+            <div key={stage.id} style={styles.aracKanbanCol} onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }} onDrop={e => { e.preventDefault(); const vehId = e.dataTransfer.getData("text"); if (vehId) moveVehicle(vehId, stage.id); }}>
+              <div style={{ ...styles.aracKanbanColHeader, borderTopColor: "#38BDF8" }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#38BDF8" }}>{stage.label}</span>
+                <span style={styles.kanbanBadge}>{stageVehicles.length}</span>
+              </div>
+              <div style={styles.aracKanbanColBody}>
+                <button style={styles.aracAddColBtn} onClick={() => setAddingTo(stage.id)}><Plus size={11} /> Araç Ekle</button>
+                {addingTo === stage.id && (
+                  <div style={styles.aracVehCard}>
+                    <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} placeholder="Araç No" value={vehForm.no} onChange={e => setVehForm(f => ({ ...f, no: e.target.value }))} autoFocus />
+                    <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} placeholder="Detay" value={vehForm.detay} onChange={e => setVehForm(f => ({ ...f, detay: e.target.value }))} />
+                    <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                      <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={addVehicle}>Ekle</button>
+                      <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setAddingTo(null)}>Vazgeç</button>
+                    </div>
+                  </div>
+                )}
+                {stageVehicles.map(v => editingVehId === v.id ? (
+                  <div key={v.id} style={styles.aracVehCard}>
+                    <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px" }} value={editForm.no} onChange={e => setEditForm(f => ({ ...f, no: e.target.value }))} />
+                    <input style={{ ...styles.mainInput, fontSize: 11, padding: "5px 8px", marginTop: 4 }} value={editForm.detay} onChange={e => setEditForm(f => ({ ...f, detay: e.target.value }))} />
+                    <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                      <button style={{ ...styles.addInlineBtn, flex: 1, fontSize: 11 }} onClick={saveEdit}>Kaydet</button>
+                      <button style={{ ...styles.ghostBtn, flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setEditingVehId(null)}>Vazgeç</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={v.id} style={styles.aracVehCard} className="hover-lift" draggable onDragStart={e => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text", v.id); }} title="Başka bir istasyona sürükleyip bırakabilirsiniz">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GripVertical size={11} color="#475569" /><span style={styles.reportRowNo}>#{v.no}</span></span>
+                      <div style={{ display: "flex", gap: 5 }}>
+                        <Edit2 size={11} color="#38BDF8" style={{ cursor: "pointer" }} onClick={() => openEditForm(v)} />
+                        <Trash2 size={11} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeVehicle(v.id)} />
+                      </div>
+                    </div>
+                    {v.detay && <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 4 }}>{v.detay}</div>}
+                    <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>{fmtDate(v.tarih)}</div>
+                    {(v.notlar || []).map(n => (
+                      <div key={n.id} style={{ fontSize: 10, marginTop: 4, display: "flex", alignItems: "flex-start", gap: 5, cursor: "pointer" }} onClick={() => toggleNote(v.id, n.id)}>
+                        {n.done ? <CheckSquare size={11} color="#10B981" style={{ flexShrink: 0, marginTop: 1 }} /> : <Square size={11} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />}
+                        <span style={{ color: n.done ? "#64748B" : "#FCA5A5", textDecoration: n.done ? "line-through" : "none", flex: 1 }}>⚠️ {n.text}</span>
+                        <X size={9} style={{ cursor: "pointer", flexShrink: 0, marginTop: 2 }} onClick={(e) => { e.stopPropagation(); removeNote(v.id, n.id); }} />
+                      </div>
+                    ))}
+                    <button style={styles.aracReworkBtn} onClick={() => setNoteModalFor(v.id)}>+ Not / Sorun Ekle</button>
+
+                    {hasForm && (
+                      v.formVerisi?.[formKey]?.doldu ? (
+                        <button style={{ ...styles.formResultBadge, borderColor: v.formVerisi[formKey].genelSonuc === "Geçti" ? "#10B981" : "#EF4444", color: v.formVerisi[formKey].genelSonuc === "Geçti" ? "#10B981" : "#EF4444" }} onClick={() => setFormModalFor({ vehId: v.id, tip: formTip })}>
+                          <FileText size={11} /> {formTip === "ee-fabrika" ? "EE Kontrol" : "Sürüş Testi"}: {v.formVerisi[formKey].genelSonuc}
+                        </button>
+                      ) : (
+                        <button style={{ ...styles.formResultBadge, borderColor: "#F59E0B", color: "#F59E0B" }} onClick={() => setFormModalFor({ vehId: v.id, tip: formTip })}>
+                          <FileUp size={11} /> Formu Doldur
+                        </button>
+                      )
+                    )}
+
+                    {nextStage && (
+                      <button style={styles.aracAdvanceBtn} onClick={() => moveVehicle(v.id, nextStage.id)}>{shortLabel(nextStage.label)} <ArrowRight size={11} /></button>
+                    )}
+                    {!nextStage && <div style={styles.aracServeBadge}>✓ Hat sonu — 8 istasyon tamamlandı</div>}
+                  </div>
+                ))}
+                {stageVehicles.length === 0 && addingTo !== stage.id && <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>Boş</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {noteModalFor && (
+        <NoteQuickModal vehicleNo={araclar.find(a => a.id === noteModalFor)?.no} onClose={() => setNoteModalFor(null)} onSave={(text) => { addNote(noteModalFor, text); setNoteModalFor(null); }} />
+      )}
+
+      {formModalFor && formModalFor.tip === "ee-fabrika" && (
+        <VehicleChecklistModal
+          vehicle={araclar.find(a => a.id === formModalFor.vehId)}
+          title="E/E Kontrol Formu (Fabrika 1 / Şube)"
+          formNo="KY.FR-18"
+          sections={EE_KONTROL_SUBE_SECTIONS}
+          headerFields={[
+            { key: "kontrolEden", label: "Kontrol Eden" },
+            { key: "tarih", label: "Tarih", type: "date", default: todayStr() },
+            { key: "vinNo", label: "VIN No" },
+            { key: "uretimIsEmriNo", label: "Üretim İş Emri No" },
+          ]}
+          existing={araclar.find(a => a.id === formModalFor.vehId)?.formVerisi?.eeKontrolFabrika}
+          onClose={() => setFormModalFor(null)}
+          onSave={(data) => { saveVehicleForm(formModalFor.vehId, "ee", data); setFormModalFor(null); }}
+        />
+      )}
+      {formModalFor && formModalFor.tip === "suruş" && (
+        <VehicleChecklistModal
+          vehicle={araclar.find(a => a.id === formModalFor.vehId)}
+          title="EOL Sürüş Test Kartı"
+          formNo="KY.FR-13"
+          sections={SURUS_TEST_SECTIONS}
+          headerFields={[
+            { key: "kontrolEden", label: "Sürücü" },
+            { key: "tarih", label: "Tarih", type: "date", default: todayStr() },
+            { key: "vinNo", label: "VIN / Plaka" },
+            { key: "baslangicSaat", label: "Başlangıç Saat", type: "time" },
+            { key: "bitisSaat", label: "Bitiş Saat", type: "time" },
+            { key: "socBaslangic", label: "SOC Başlangıç (%)" },
+            { key: "socBitis", label: "SOC Bitiş (%)" },
+            { key: "odoBaslangic", label: "Odo Başlangıç (km)" },
+            { key: "odoBitis", label: "Odo Bitiş (km)" },
+          ]}
+          existing={araclar.find(a => a.id === formModalFor.vehId)?.formVerisi?.suruşTesti}
+          onClose={() => setFormModalFor(null)}
+          onSave={(data) => { saveVehicleForm(formModalFor.vehId, "suruş", data); setFormModalFor(null); }}
+        />
+      )}
+    </div>
+  );
+}
 
 function IstasyonAracView({ stationId, title, grup, reports, onNavigate }) {
   const map = STATION_ASAMA_MAP[stationId];
