@@ -114,12 +114,12 @@ const TOPLANTI_MODULE_IDS = ["asakai", "iyilestirme", "kalite_kontrol", "tedarik
 // menüde yer tutucu sayfalar olarak duruyorlar. Formlar geldiğinde bu
 // listeler gerçek veri yapılarına dönüştürülecek.
 const FABRIKA_KONTROL_ITEMS = [
-  { id: "fk-istasyon-1", label: "İstasyon Kontrol 1" },
-  { id: "fk-istasyon-2", label: "İstasyon Kontrol 2" },
-  { id: "fk-istasyon-3", label: "İstasyon Kontrol 3" },
-  { id: "fk-istasyon-4", label: "İstasyon Kontrol 4" },
-  { id: "fk-istasyon-5", label: "İstasyon Kontrol 5" },
-  { id: "fk-istasyon-6", label: "İstasyon Kontrol 6" },
+  { id: "fk-istasyon-1", label: "İstasyon 1 — Şasi ve Komponent İzlenebilirliği" },
+  { id: "fk-istasyon-2", label: "İstasyon 2 — İç Trim ve Yönlendirme" },
+  { id: "fk-istasyon-3", label: "İstasyon 3 — Gövde İzolasyon ve Kilit" },
+  { id: "fk-istasyon-4", label: "İstasyon 4 — Cam Montajı ve Sızdırmazlık" },
+  { id: "fk-istasyon-5", label: "İstasyon 5 — Görsel Kalite (Gap & Flush)" },
+  { id: "fk-istasyon-6", label: "İstasyon 6 — Ön Montaj ve Hazırlık" },
   { id: "fk-eol", label: "EOL Kontrol" },
   { id: "fk-ee", label: "EE Kontrol" },
   { id: "fk-suruş", label: "Sürüş Testi" },
@@ -152,10 +152,72 @@ const SURUS_TEST_SECTIONS = [
   { title: "Mühendis & Kalite Kontrolü", items: ["Kapı / Kaput ayarı — Görsel kontrol. Fotoğraf ilet.", "Boya kalitesi — Görsel kontrol. Fotoğraf ilet.", "Trim & Bagaj — İç trim, dış trim düzgün mü? Bagaj yüksekliği doğru mu?", "Tam dönüş kontrolü — Düşük hızda tam sağ/sol manevra. Sürtme, vuruntu veya aks sesi var mı?", "DTC / Diyagnostik tarama — Aktif veya geçmiş hata varsa kayıt altına al. Tarama bitiş saatini not et.", "Mühendis Nihai Onayı"] },
 ];
 
-// Fabrika 1 EE Kontrol / Sürüş Testi artık araç bazlı kanban formuna
-// taşındı (bkz. VehicleChecklistModal) — bu istasyon sayfalarının genel
-// checklist'i boş/düzenlenebilir başlıyor, diğer istasyonlarla aynı.
-const STATION_SEED_TEMPLATES = {};
+// L6-L7 üretim hattı montaj istasyonları — kullanıcının paylaştığı teknik
+
+// şartnameden işlendi. tip: 'check' (Uygun/Uygun Değil), 'tork' (Nm değeri +
+
+// zorunlu Markalama onayı) veya 'metin' (serbest giriş, örn. VIN/barkod).
+
+const ISTASYON_1_SASI_ITEMS = [
+  { id: uid(), text: "Şasi (VIN) Numarası — manuel giriş / barkod ile doğrulama", tip: "metin", torkNm: null },
+  { id: uid(), text: "Motor Numarası (komponent eşleştirme)", tip: "metin", torkNm: null },
+  { id: uid(), text: "Batarya Numarası (komponent eşleştirme)", tip: "metin", torkNm: null },
+  { id: uid(), text: "MCU Ünite Barkodu (komponent eşleştirme)", tip: "metin", torkNm: null },
+  { id: uid(), text: "Chogori şarj kablosu bağlantısı yapıldı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Termal güvenlik kontrolü yapıldı mı?", tip: "check", torkNm: null },
+];
+
+const ISTASYON_2_TRIM_ITEMS = [
+  { id: uid(), text: "Koltuk montajı öncesi oto servis kılıfları (imperteks/bez) takıldı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Kızak cıvataları standart torkla sıkıldı mı?", tip: "tork", torkNm: null },
+  { id: uid(), text: "Direksiyon mili hizalaması yapıldı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Direksiyon mili kilitlendi mi?", tip: "check", torkNm: null },
+];
+
+const ISTASYON_3_GOVDE_ITEMS = [
+  { id: uid(), text: "Tavan sacı çatlak önleyici Henkel yapıştırıcı standart spesifikasyona göre uygulandı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Kapı kilit montaj modifikasyonları tamamlandı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Kapı kilitleri test edildi mi?", tip: "check", torkNm: null },
+];
+
+const ISTASYON_4_CAM_ITEMS = [
+  { id: uid(), text: "Yan cam E-mark sertifikasyon kodu (sisteme işlenecek)", tip: "metin", torkNm: null },
+  { id: uid(), text: "Kelebek cam E-mark sertifikasyon kodu (sisteme işlenecek)", tip: "metin", torkNm: null },
+  { id: uid(), text: "Cam fitilleri sızdırmazlık testine hazır mı? (görsel onay)", tip: "check", torkNm: null },
+  { id: uid(), text: "Birleşim yerleri sızdırmazlık testine hazır mı? (görsel onay)", tip: "check", torkNm: null },
+];
+
+const ISTASYON_5_GORSEL_ITEMS = [
+  { id: uid(), text: "Gap & Flush — kapı/çamurluk/bagaj kapağı boşluk ve yüzey ölçüm değerleri (kumpas)", tip: "metin", torkNm: null },
+  { id: uid(), text: "Görsel kontrol — boya/kaporta çizik veya hata var mı? Rötuş onayı yapıldı mı?", tip: "check", torkNm: null },
+];
+
+const ISTASYON_6_ONMONTAJ_ITEMS = [
+  { id: uid(), text: "Ön Destek Braketi: M8 cıvata/somun torklandı mı?", tip: "tork", torkNm: 20 },
+  { id: uid(), text: "Akü Montajı: Akü kutup başı cıvataları torklanıp Molykote sürüldü mü?", tip: "tork", torkNm: 4 },
+  { id: uid(), text: "Akü Montajı: Negatif (-) kablo lift için boşta bırakıldı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Klima Sistemi: Fan cıvataları torklandı mı?", tip: "tork", torkNm: 25 },
+  { id: uid(), text: "Klima Sistemi: 250 gr gaz ve 0.10 ml PAG yağı dolumu yapılıp çıktı araca bantlandı mı?", tip: "check", torkNm: null },
+  { id: uid(), text: "Ön Tampon & Kaput: Üst M8 cıvatalar torklandı mı?", tip: "tork", torkNm: 20 },
+  { id: uid(), text: "Ön Tampon & Kaput: Alt/üst M6 cıvatalar torklandı mı?", tip: "tork", torkNm: 8 },
+  { id: uid(), text: "Ön Tampon & Kaput: Kaput ayarı (Gap & Flush) yapılıp kilit mili sabitlendi mi?", tip: "check", torkNm: null },
+  { id: uid(), text: "Silecek & Su Yolu: Silecek kilit somunları torklandı mı?", tip: "tork", torkNm: 15 },
+  { id: uid(), text: "Silecek & Su Yolu: 9 adet sızdırmazlık keçesi takılıp nozullar kilitlendi mi?", tip: "check", torkNm: null },
+  { id: uid(), text: "Davlumbaz & Tekerlek: Ön/arka davlumbaz vidaları torklandı mı?", tip: "tork", torkNm: 8 },
+  { id: uid(), text: "Davlumbaz & Tekerlek: 4 bijon takılıp boşlukları alındı mı?", tip: "check", torkNm: null },
+];
+
+// Fabrika 1 EE Kontrol / Sürüş Testi araç bazlı kanban formuna taşındı
+// (bkz. VehicleChecklistModal) — o iki istasyon burada yer almıyor.
+// EOL Kontrol için doğru form henüz gelmedi, boş/düzenlenebilir kalıyor.
+const STATION_SEED_TEMPLATES = {
+  "fk-istasyon-1": ISTASYON_1_SASI_ITEMS,
+  "fk-istasyon-2": ISTASYON_2_TRIM_ITEMS,
+  "fk-istasyon-3": ISTASYON_3_GOVDE_ITEMS,
+  "fk-istasyon-4": ISTASYON_4_CAM_ITEMS,
+  "fk-istasyon-5": ISTASYON_5_GORSEL_ITEMS,
+  "fk-istasyon-6": ISTASYON_6_ONMONTAJ_ITEMS,
+};
 
 // Yönetilebilir üyelik/izin sistemi — her sekme (nav öğesi) burada bir
 // "sectionId" ile tanımlı. Admin, her kullanıcı için bu id'lerden hangisini
@@ -1282,7 +1344,10 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
   const currentModObj = modules.find(m => m.id === activeModule) || modules[0];
   const CurrentModIcon = MODULE_META[currentModObj.id]?.icon || ShieldCheck;
   const currentModColor = MODULE_META[currentModObj.id]?.color || "#94A3B8";
-  const filtered = tasks.filter(t => t.baslik.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = tasks.filter(t =>
+    t.baslik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.etiketler || []).some(e => e.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <div style={styles.viewContainer}>
@@ -1304,6 +1369,11 @@ function KanbanBoardView({ activeModule, modules, tasks, searchQuery, setSearchQ
                     <div key={task.id} style={{ ...styles.kanbanCard, ...(isOverdue ? { borderColor: "#EF4444" } : {}) }} className="hover-lift" draggable onDragStart={e => e.dataTransfer.setData("text", task.id)}>
                       <div style={styles.cardHeaderRow}><span style={styles.taskCodeBadge}>{task.kod}</span><button style={styles.deleteIconBtn} onClick={() => onDeleteTask(task.id)}><Trash2 size={12} /></button></div>
                       <div style={styles.kanbanCardTitle} onClick={() => onOpenDetail(task)}>{task.baslik}</div>
+                      {(task.etiketler || []).length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                          {task.etiketler.map(e => <span key={e} style={styles.keywordChip}>#{e}</span>)}
+                        </div>
+                      )}
                       <div style={styles.kanbanCardFooter}>
                         <span>👤 {task.sorumlu}{(task.ekipUyeleri || []).length > 0 ? ` +${task.ekipUyeleri.length}` : ""}</span>
                         <span style={isOverdue ? { color: "#EF4444", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 } : {}}>{isOverdue && <AlertTriangle size={11} />} 📅 {fmtDate(task.vade)}</span>
@@ -1382,7 +1452,18 @@ function TaskDetailModal({ task, currentUser, usersList, contacts, personOptions
   const [subText, setSubText] = useState("");
   const [editTitle, setEditTitle] = useState(task.baslik);
   const [editSorumlu, setEditSorumlu] = useState(task.sorumlu);
+  const [keywordText, setKeywordText] = useState("");
   const ekip = task.ekipUyeleri || [];
+  const etiketler = task.etiketler || [];
+
+  const addKeyword = () => {
+    const k = keywordText.trim().replace(/^#/, "");
+    if (!k || etiketler.some(e => e.toLowerCase() === k.toLowerCase())) { setKeywordText(""); return; }
+    onSaveTask({ ...task, etiketler: [...etiketler, k] });
+    setKeywordText("");
+  };
+  const removeKeyword = (k) => onSaveTask({ ...task, etiketler: etiketler.filter(e => e !== k) });
+
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.drawerContainer}>
@@ -1397,6 +1478,18 @@ function TaskDetailModal({ task, currentUser, usersList, contacts, personOptions
           <div>
             <label style={styles.inputLabel}>Ek Kişiler</label>
             <TeamPicker usersList={usersList} contacts={contacts} selected={ekip} onChange={(next) => onSaveTask({ ...task, ekipUyeleri: next })} excludeName={editSorumlu} />
+          </div>
+          <div>
+            <label style={styles.inputLabel}>Anahtar Kelimeler</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: etiketler.length > 0 ? 8 : 0 }}>
+              {etiketler.map(k => (
+                <span key={k} style={styles.chip}>#{k} <X size={11} style={{ cursor: "pointer" }} onClick={() => removeKeyword(k)} /></span>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input style={styles.mainInput} placeholder="Anahtar kelime yazıp Enter'a basın..." value={keywordText} onChange={e => setKeywordText(e.target.value)} onKeyDown={e => e.key === "Enter" && addKeyword()} />
+              <button style={styles.addInlineBtn} onClick={addKeyword}>Ekle</button>
+            </div>
           </div>
           <select style={styles.selectInput} value={task.durum} onChange={e => onSaveTask({...task, durum: e.target.value})}>{KANBAN_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
           <div style={styles.subtaskSection}>
@@ -2314,29 +2407,48 @@ function ReportDetail({ report, onUpdate, onClose, currentUser, onAddUygunsuzluk
 function IstasyonKontrolView({ stationId, title, grup, data, onUpdate, currentUser }) {
   const [tab, setTab] = useState("checklist");
   const [newItemText, setNewItemText] = useState("");
+  const [newItemTip, setNewItemTip] = useState("check");
   const seedTemplate = STATION_SEED_TEMPLATES[stationId] || [];
   const template = data?.checklistTemplate || seedTemplate;
   const kayitlar = data?.kayitlar || [];
   const hatalar = data?.hatalar || [];
   const today = todayStr();
   const todayKayit = kayitlar.find(k => k.tarih === today);
-  const [checkedIds, setCheckedIds] = useState(todayKayit?.checkedIds || []);
+  // Eski kayıtlar sadece checkedIds tutuyordu (basit onay); yeni sistemde
+  // her madde kendi "değer" nesnesini tutuyor (tork/metin/onay) — geriye
+  // dönük uyum için checkedIds'i degerler formatına çeviriyoruz.
+  const initialDegerler = todayKayit?.degerler || Object.fromEntries((todayKayit?.checkedIds || []).map(id => [id, { checked: true }]));
+  const [degerler, setDegerler] = useState(initialDegerler);
   const [kontrolEden, setKontrolEden] = useState(todayKayit?.kontrolEden || currentUser?.name || "");
   const [not, setNot] = useState(todayKayit?.not || "");
   const [hataText, setHataText] = useState("");
   const bekleyenSayisi = kayitlar.filter(k => k.onayDurumu === "bekliyor").length;
 
+  const isItemDone = (item, deg) => {
+    const d = (deg || {})[item.id];
+    if (!d) return false;
+    if (item.tip === "tork") return !!d.torkDeger && !!d.markalama;
+    if (item.tip === "metin") return !!(d.metin && d.metin.trim());
+    return !!d.checked;
+  };
+  const countDone = (deg) => template.filter(item => isItemDone(item, deg)).length;
+  const degerlerOf = (kayit) => kayit.degerler || Object.fromEntries((kayit.checkedIds || []).map(id => [id, { checked: true }]));
+
   const addItem = () => {
     const t = newItemText.trim();
     if (!t) return;
-    onUpdate({ ...data, checklistTemplate: [...template, { id: uid(), text: t }] });
+    onUpdate({ ...data, checklistTemplate: [...template, { id: uid(), text: t, tip: newItemTip, torkNm: null }] });
     setNewItemText("");
   };
   const removeItem = (id) => onUpdate({ ...data, checklistTemplate: template.filter(i => i.id !== id) });
-  const toggleCheck = (id) => setCheckedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const setChecked = (id) => setDegerler(prev => ({ ...prev, [id]: { ...prev[id], checked: !prev[id]?.checked } }));
+  const setTorkDeger = (id, val) => setDegerler(prev => ({ ...prev, [id]: { ...prev[id], torkDeger: val } }));
+  const setMarkalama = (id) => setDegerler(prev => ({ ...prev, [id]: { ...prev[id], markalama: !prev[id]?.markalama } }));
+  const setMetin = (id, val) => setDegerler(prev => ({ ...prev, [id]: { ...prev[id], metin: val } }));
 
   const saveToday = () => {
-    const entry = { id: todayKayit?.id || uid(), tarih: today, kontrolEden: kontrolEden.trim() || "—", checkedIds, not: not.trim(), onayDurumu: todayKayit?.onayDurumu || "bekliyor", onaylayan: todayKayit?.onaylayan || null, onayTarihi: todayKayit?.onayTarihi || null, aktarildi: todayKayit?.aktarildi || false, aktarilmaTarihi: todayKayit?.aktarilmaTarihi || null };
+    const entry = { id: todayKayit?.id || uid(), tarih: today, kontrolEden: kontrolEden.trim() || "—", degerler, not: not.trim(), onayDurumu: todayKayit?.onayDurumu || "bekliyor", onaylayan: todayKayit?.onaylayan || null, onayTarihi: todayKayit?.onayTarihi || null, aktarildi: todayKayit?.aktarildi || false, aktarilmaTarihi: todayKayit?.aktarilmaTarihi || null };
     const nextKayitlar = todayKayit ? kayitlar.map(k => k.id === todayKayit.id ? entry : k) : [entry, ...kayitlar];
     onUpdate({ ...data, checklistTemplate: template, kayitlar: nextKayitlar });
   };
@@ -2381,26 +2493,60 @@ function IstasyonKontrolView({ stationId, title, grup, data, onUpdate, currentUs
           </div>
 
           {template.length === 0 && <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic", marginBottom: 12 }}>Henüz checklist maddesi eklenmedi — aşağıdan ekleyin.</div>}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-            {template.map(item => (
-              <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#0F172A", borderRadius: 8, padding: "8px 12px" }}>
-                <span onClick={() => toggleCheck(item.id)} style={{ cursor: "pointer", display: "flex" }}>
-                  {checkedIds.includes(item.id) ? <CheckSquare size={18} color="#10B981" /> : <Square size={18} color="#F59E0B" />}
-                </span>
-                <span style={{ flex: 1, fontSize: 13, textDecoration: checkedIds.includes(item.id) ? "line-through" : "none", color: checkedIds.includes(item.id) ? "#64748B" : "#F8FAFC" }}>{item.text}</span>
-                <X size={13} color="#EF4444" style={{ cursor: "pointer" }} onClick={() => removeItem(item.id)} />
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+            {template.map(item => {
+              const d = degerler[item.id] || {};
+              const tip = item.tip || "check";
+              const done = isItemDone(item, degerler);
+              const torkMissingMark = tip === "tork" && d.torkDeger && !d.markalama;
+              return (
+                <div key={item.id} style={{ background: "#0F172A", borderRadius: 8, padding: "10px 12px", border: torkMissingMark ? "1px solid #EF4444" : "1px solid transparent" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    {tip === "check" && (
+                      <span onClick={() => setChecked(item.id)} style={{ cursor: "pointer", display: "flex", marginTop: 1, flexShrink: 0 }}>
+                        {d.checked ? <CheckSquare size={18} color="#10B981" /> : <Square size={18} color="#F59E0B" />}
+                      </span>
+                    )}
+                    {tip !== "check" && (done ? <CheckSquare size={18} color="#10B981" style={{ flexShrink: 0, marginTop: 1 }} /> : <Square size={18} color="#475569" style={{ flexShrink: 0, marginTop: 1 }} />)}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, textDecoration: (tip === "check" && d.checked) ? "line-through" : "none", color: (tip === "check" && d.checked) ? "#64748B" : "#F8FAFC" }}>{item.text}</span>
+
+                      {tip === "tork" && (
+                        <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input type="number" style={{ ...styles.mainInput, width: 90, padding: "5px 8px" }} placeholder={item.torkNm ? String(item.torkNm) : "Nm"} value={d.torkDeger || ""} onChange={e => setTorkDeger(item.id, e.target.value)} />
+                            <span style={{ fontSize: 10, color: "#64748B" }}>Nm{item.torkNm ? ` (ref: ${item.torkNm} Nm)` : ""}</span>
+                          </div>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, cursor: "pointer", color: torkMissingMark ? "#EF4444" : "#94A3B8", fontWeight: torkMissingMark ? 700 : 500 }}>
+                            <input type="checkbox" checked={!!d.markalama} onChange={() => setMarkalama(item.id)} />
+                            Markalama Yapıldı mı?{torkMissingMark ? " (zorunlu)" : ""}
+                          </label>
+                        </div>
+                      )}
+                      {tip === "metin" && (
+                        <input style={{ ...styles.mainInput, fontSize: 12, marginTop: 6 }} placeholder="Değer girin..." value={d.metin || ""} onChange={e => setMetin(item.id, e.target.value)} />
+                      )}
+                    </div>
+                    <X size={13} color="#EF4444" style={{ cursor: "pointer", flexShrink: 0, marginTop: 2 }} onClick={() => removeItem(item.id)} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-            <input style={styles.mainInput} placeholder="Yeni checklist maddesi..." value={newItemText} onChange={e => setNewItemText(e.target.value)} onKeyDown={e => e.key === "Enter" && addItem()} />
+          <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+            <input style={{ ...styles.mainInput, flex: 1, minWidth: 160 }} placeholder="Yeni checklist maddesi..." value={newItemText} onChange={e => setNewItemText(e.target.value)} onKeyDown={e => e.key === "Enter" && addItem()} />
+            <select style={{ ...styles.selectInput, maxWidth: 160 }} value={newItemTip} onChange={e => setNewItemTip(e.target.value)}>
+              <option value="check">Onay (Uygun/Değil)</option>
+              <option value="tork">Tork + Markalama</option>
+              <option value="metin">Serbest Metin</option>
+            </select>
             <button style={styles.addInlineBtn} onClick={addItem}>+ Ekle</button>
           </div>
 
           <div style={{ marginBottom: 12 }}><label style={styles.inputLabel}>Kontrol Eden</label><input style={styles.mainInput} value={kontrolEden} onChange={e => setKontrolEden(e.target.value)} placeholder="Operatör adı..." /></div>
           <div style={{ marginBottom: 16 }}><label style={styles.inputLabel}>Not (opsiyonel)</label><input style={styles.mainInput} value={not} onChange={e => setNot(e.target.value)} /></div>
 
-          <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 10 }}>{checkedIds.length}/{template.length} madde tamamlandı</div>
+          <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 10 }}>{countDone(degerler)}/{template.length} madde tamamlandı</div>
           <button style={styles.primaryActionBtn} onClick={saveToday} disabled={template.length === 0}>Bugünkü Kontrolü Kaydet</button>
         </div>
       )}
@@ -2439,7 +2585,7 @@ function IstasyonKontrolView({ stationId, title, grup, data, onUpdate, currentUs
                   <tr key={k.id} style={styles.tr}>
                     <td style={styles.td}>{fmtDate(k.tarih)}</td>
                     <td style={styles.td}>{k.kontrolEden}</td>
-                    <td style={styles.td}>{k.checkedIds.length}/{template.length}</td>
+                    <td style={styles.td}>{countDone(degerlerOf(k))}/{template.length}</td>
                     <td style={{ ...styles.td, color: onayBadge(k.onayDurumu).color, fontWeight: 700 }}>{onayBadge(k.onayDurumu).text}</td>
                     <td style={styles.td}>
                       {k.aktarildi ? (
@@ -2468,7 +2614,7 @@ function IstasyonKontrolView({ stationId, title, grup, data, onUpdate, currentUs
                 <div key={k.id} style={{ background: "#0F172A", borderRadius: 10, padding: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                     <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtDate(k.tarih)} — {k.kontrolEden}</span>
-                    <span style={{ fontSize: 12, color: "#94A3B8" }}>{k.checkedIds.length}/{template.length} madde</span>
+                    <span style={{ fontSize: 12, color: "#94A3B8" }}>{countDone(degerlerOf(k))}/{template.length} madde</span>
                   </div>
                   {k.not && <div style={{ fontSize: 12, color: "#CBD5E1", marginBottom: 8 }}>Not: {k.not}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
@@ -3330,6 +3476,7 @@ const styles = {
   kanbanCardFooter: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94A3B8", marginTop: 8 },
   taskCodeBadge: { fontFamily: "monospace", fontSize: 10, color: "#F59E0B", background: "rgba(245, 158, 11, 0.15)", padding: "2px 6px", borderRadius: 4, fontWeight: 700 },
   chip: { background: "#0F172A", border: "1px solid #334155", borderRadius: 20, padding: "4px 8px 4px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 },
+  keywordChip: { background: "rgba(56, 189, 248, 0.12)", border: "1px solid #38BDF8", color: "#38BDF8", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 600 },
   filterToolbar: { display: "flex", gap: 12 },
   searchWrapper: { display: "flex", alignItems: "center", gap: 8, background: "#1E293B", padding: "8px 12px", borderRadius: 8, border: "1px solid #334155", flex: 1 },
   searchInput: { background: "transparent", border: "none", color: "#F8FAFC", fontSize: 12, outline: "none", width: "100%" },
