@@ -118,11 +118,10 @@ const FABRIKA_KONTROL_ITEMS = [
   { id: "fk-istasyon-2", label: "İstasyon 2 — İç Trim ve Yönlendirme" },
   { id: "fk-istasyon-3", label: "İstasyon 3 — Gövde İzolasyon ve Kilit" },
   { id: "fk-istasyon-4", label: "İstasyon 4 — Cam Montajı ve Sızdırmazlık" },
-  { id: "fk-istasyon-5", label: "İstasyon 5 — Görsel Kalite (Gap & Flush)" },
-  { id: "fk-istasyon-6", label: "İstasyon 6 — Ön Montaj ve Hazırlık" },
-  { id: "fk-eol", label: "EOL Kontrol" },
-  { id: "fk-ee", label: "EE Kontrol" },
-  { id: "fk-suruş", label: "Sürüş Testi" },
+  { id: "fk-ee", label: "İstasyon 5 — EE Kontrolleri" },
+  { id: "fk-istasyon-5", label: "İstasyon 6 — Görsel Kalite (Gap & Flush)" },
+  { id: "fk-istasyon-6", label: "İstasyon 7 — Ön Montaj ve Hazırlık" },
+  { id: "fk-suruş", label: "İstasyon 8 — EOL (Hat Sonu) ve Dinamik Testler" },
 ];
 const DEPO_KONTROL_ITEMS = [
   { id: "dk-suruş", label: "Sürüş Testi" },
@@ -951,9 +950,9 @@ export default function App() {
         ) : activeModule === "admin_panel" ? (
           currentUser.role === "admin" ? <AdminPermissionsView usersList={usersList} setUsersList={setUsersList} modules={modules} setModules={setModules} contacts={contacts} setContacts={setContacts} /> : <div style={styles.unauthorizedBox}><Lock size={40} color="#EF4444" /><h2>Yetkiniz Yok</h2></div>
         ) : FABRIKA_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
-          <IstasyonKontrolView key={activeModule} stationId={activeModule} title={FABRIKA_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Fabrika Kontrol" data={stationData[activeModule]} onUpdate={(d) => updateStationData(activeModule, d)} currentUser={currentUser} />
+          <IstasyonAracView key={activeModule} stationId={activeModule} title={FABRIKA_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Fabrika Kontrol" reports={reports} onNavigate={setActiveModule} />
         ) : DEPO_KONTROL_ITEMS.some(i => i.id === activeModule) ? (
-          <IstasyonKontrolView key={activeModule} stationId={activeModule} title={DEPO_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Depo Kontrol" data={stationData[activeModule]} onUpdate={(d) => updateStationData(activeModule, d)} currentUser={currentUser} />
+          <IstasyonAracView key={activeModule} stationId={activeModule} title={DEPO_KONTROL_ITEMS.find(i => i.id === activeModule).label} grup="Depo Kontrol" reports={reports} onNavigate={setActiveModule} />
         ) : modules.some(m => m.id === activeModule) ? (
           <KanbanBoardView activeModule={activeModule} modules={modules} tasks={tasks.filter((t) => t.module === activeModule)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} currentUser={currentUser} onOpenDetail={setSelectedTask} onMoveStage={(id, st) => setTasks(tasks.map(t => t.id === id ? {...t, durum: st, bitisTarihi: st === "tamam" ? todayStr() : t.bitisTarihi} : t))} onCreateTask={(tData) => {
             const newId = uid();
@@ -2400,6 +2399,93 @@ function ReportDetail({ report, onUpdate, onClose, currentUser, onAddUygunsuzluk
           onSave={(data) => addRework(reworkModalFor, data)}
         />
       )}
+    </div>
+  );
+}
+
+// Fabrika Kontrol / Depo Kontrol istasyonlarından, mümkün olanlar Araç Akış
+// Takibi'ndeki gerçek konum+aşama ile eşleştiriliyor — böylece o istasyona
+// tıklayınca gerçekten o aşamadaki araçlar görünüyor. Eşleşmesi olmayan
+// istasyonlar (henüz Araç Akış Takibi'nde ayrı bir aşama olarak izlenmeyen
+// montaj istasyonları) için o konumdaki (Fabrika 1 / Depo) tüm araçlar
+// gösterilir.
+const STATION_ASAMA_MAP = {
+  "fk-ee": { konum: "fabrika1", asama: "EE Kontrol" },
+  "fk-suruş": { konum: "fabrika1", asama: "Sürüş Testi" },
+  "dk-suruş": { konum: "depo", asama: "Sürüş Testi" },
+  "dk-sizdirmazlik": { konum: "depo", asama: "Sızdırmazlık Testi" },
+  "dk-ee": { konum: "depo", asama: "EE Kontrol" },
+  "dk-final": { konum: "depo", asama: "Final Kontrol" },
+};
+const STATION_FORM_KEY_MAP = { "fk-ee": "eeKontrolFabrika", "fk-suruş": "suruşTesti", "dk-ee": "eeKontrol", "dk-final": "finalKontrol" };
+
+function IstasyonAracView({ stationId, title, grup, reports, onNavigate }) {
+  const map = STATION_ASAMA_MAP[stationId];
+  const latestReport = reports.length > 0 ? [...reports].sort((a, b) => (a.tarih < b.tarih ? 1 : -1))[0] : null;
+  const allVehicles = latestReport?.araclar || [];
+  const fallbackKonum = stationId.startsWith("fk-") ? "fabrika1" : "depo";
+  const vehicles = map
+    ? allVehicles.filter(v => v.konum === map.konum && v.asama === map.asama)
+    : allVehicles.filter(v => v.konum === fallbackKonum && v.asama !== "Serbestlik");
+
+  const formKey = STATION_FORM_KEY_MAP[stationId];
+  const doluSayisi = formKey ? vehicles.filter(v => v.formVerisi?.[formKey]?.doldu).length : null;
+  const nokSayisi = formKey ? vehicles.filter(v => v.formVerisi?.[formKey]?.genelSonuc === "Kaldı").length : null;
+  const reworkSayisi = vehicles.filter(v => (v.reworklar || []).some(r => !r.done)).length;
+
+  return (
+    <div style={styles.viewContainer}>
+      <div style={styles.yearEndHeader}>
+        <div>
+          <h1 style={styles.viewTitle}>{title}</h1>
+          <p style={styles.viewSub}>{grup}{!map && " — Araç Akış Takibi'nde henüz ayrı bir aşama olarak izlenmiyor, bu yüzden bu konumdaki tüm araçlar gösteriliyor."}</p>
+        </div>
+        {latestReport && <button style={styles.printBtn} onClick={() => onNavigate("raporlar")}>Araç Akış Takibi'nde Aç</button>}
+      </div>
+
+      <div style={styles.dashboardCardGrid}>
+        <div style={{ ...styles.dashCard, borderLeftColor: "#94A3B8" }}><div style={styles.dashCardTitle}>Bu İstasyondaki Araç</div><div style={styles.dashCardValue}>{vehicles.length}</div></div>
+        {formKey && <div style={{ ...styles.dashCard, borderLeftColor: "#10B981" }}><div style={styles.dashCardTitle}>Form Dolduruldu</div><div style={styles.dashCardValue}>{doluSayisi}/{vehicles.length}</div></div>}
+        {formKey && <div style={{ ...styles.dashCard, borderLeftColor: "#EF4444" }}><div style={styles.dashCardTitle}>Kaldı (NOK)</div><div style={styles.dashCardValue}>{nokSayisi}</div></div>}
+        <div style={{ ...styles.dashCard, borderLeftColor: "#F59E0B" }}><div style={styles.dashCardTitle}>Açık Rework</div><div style={styles.dashCardValue}>{reworkSayisi}</div></div>
+      </div>
+
+      <div style={styles.yearEndTableCard}>
+        {!latestReport ? (
+          <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic", textAlign: "center", padding: 30 }}>Henüz Araç Akış Takibi'nde rapor yok.</div>
+        ) : vehicles.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#64748B", fontStyle: "italic", textAlign: "center", padding: 30 }}>Şu anda bu istasyonda araç yok.</div>
+        ) : (
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Araç No</th>
+                <th style={styles.th}>Aşama</th>
+                <th style={styles.th}>Detay</th>
+                <th style={styles.th}>Tarih</th>
+                {formKey && <th style={styles.th}>Form Sonucu</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {vehicles.map(v => (
+                <tr key={v.id} style={styles.tr}>
+                  <td style={styles.tdTitle}>#{v.no}</td>
+                  <td style={styles.td}>{v.asama}</td>
+                  <td style={styles.td}>{v.detay}</td>
+                  <td style={styles.td}>{fmtDate(v.tarih)}</td>
+                  {formKey && (
+                    <td style={styles.td}>
+                      {v.formVerisi?.[formKey]?.doldu
+                        ? <span style={{ color: v.formVerisi[formKey].genelSonuc === "Geçti" ? "#10B981" : "#EF4444", fontWeight: 700 }}>{v.formVerisi[formKey].genelSonuc}</span>
+                        : <span style={{ color: "#64748B" }}>Doldurulmadı</span>}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
